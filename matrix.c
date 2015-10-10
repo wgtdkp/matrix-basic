@@ -10,7 +10,8 @@ int print_steps = 0;
 static Matrix* gen_p(int ip[], int n);
 static void swap_dp(double** a, double** b);
 static void swap_d(double* a, double* b);
-
+static bool is_symmetrical(Matrix* M);
+static double check_order_main_det(Matrix* M, bool* gt, double x);
 /**
 创建n阶方阵
 */
@@ -118,7 +119,7 @@ Matrix* mul(Matrix* A, Matrix* B) {
 /**
 计算矩阵的行列式
 1.改进的算法更快
-2.当矩阵较大时，计算存在误差
+2.当数值较大时，计算存在误差
 */
 double det(Matrix* M) {
     int i, j;
@@ -387,6 +388,67 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
 	free(L); free(U); free(Y); free(P);
 	return X;
 
+}
+
+/**
+楚列斯基分解
+*/
+Matrix* cholesky_decomp(Matrix* A, Matrix* B) {
+    //检查系数矩阵A是否为对称正定矩阵
+    assert(is_symmetrical(A) && is_order_main_dets_gt_x(A, 0));
+}
+
+/**
+检查矩阵M的所有顺序主子式是否都大于x，一个频繁的用途是检查所有顺序主子式均大于0
+return: 当矩阵M的所有顺序主子式均大于x时，返回值为true
+*/
+bool is_order_main_dets_gt_x(Matrix* M, double x) {
+    bool gt_x = true;
+    double det = check_order_main_det(M, &gt_x, x);
+    return gt && (det > x); 
+}
+
+
+static double check_order_main_det(Matrix* M, bool* gt, double x) {
+    int i, j;
+    double ret, cofactor;
+    double* memi;
+    assert(M->m == M->n);
+    if(1 == M->n)
+        return M->mem[0][0];
+    for(i = M->m - 1, j = M->n - 1, ret = 0, memi = M->mem[i]; i >= 0; i--) {
+        swap_dp(&M->mem[i], &memi);
+        M->m--;
+        M->n--;
+
+        cofactor = check_order_main_det(M, gt, x);
+        if(i == M->m - 1 && !(cofactor > x))
+            gt = false;
+        cofactor *= (i + j) & 1 == 1 ? -1 : 1; // Aij = (-1)i+jMij
+        ret += memi[j] * cofactor;
+
+        //恢复M矩阵
+        M->m++;
+        M->n++;
+    }
+
+    //恢复M矩阵
+    for (i = M->m - 1; i > 0; i--)
+        M->mem[i] = M->mem[i - 1];
+    M->mem[0] = memi;
+
+    return ret;
+}
+
+
+static bool is_symmetrical(Matrix* M) {
+    int i, j;
+    if(M->m != M->n) return false;
+    for(i = 0; i < M->m; i++)
+        for(j = i; j < M->n; j++)
+            if(M->mem[i][j] != M->mem[j][i])
+                return false;
+    return true;
 }
 
 static Matrix* gen_p(int ip[], int n) {

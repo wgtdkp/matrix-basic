@@ -3,6 +3,11 @@
 
 #define DOUBLE_EQUAL(x, y)  (x - y < 1e-6 && x - y > -1e-6)
 
+typedef enum{
+    false = 0,
+    true = 1
+} bool;
+
 extern int print_steps;
 
 typedef struct {
