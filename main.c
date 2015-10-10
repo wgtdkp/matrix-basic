@@ -8,12 +8,15 @@ static char* app_name = "mym";
 
 void usage(void) {
     printf("Usage:\n"
-		   "    %s gauss file [step]    -use gauss elimination\n"
-           "    %s megauss file [step]  -use main element gauss elimination\n"
-           "    %s tri file [step]      -use triangular decomposition\n"
-           "    %s metri file [step]    -use main element triangular decomposition\n"
-           "    %s help                 -show this usage\n"
-           "\n", app_name, app_name, app_name, app_name, app_name
+		   "    %s gauss <file> [step]      -use gauss elimination\n"
+           "    %s megauss <file> [step]    -use main element gauss elimination\n"
+           "    %s tri <file> [step]        -use triangular decomposition\n"
+           "    %s metri <file> [step]      -use main element triangular decomposition\n"
+           "    %s cholesky <file> [step]   -use cholesky decomposition\n"
+           "    %s encholesky <file> [step] -use enhanced cholesky decomposition\n"
+           "    %s charsing <file> [step]   -use charsing method\n"
+           "    %s help                     -show this usage\n"
+           "\n", app_name, app_name, app_name, app_name, app_name, app_name, app_name, app_name
         );
 }
 
@@ -76,6 +79,12 @@ int main(int argc, char* argv[]) {
 		X = tri_decomp(A, B);
     } else if(0 == strcmp("metri", argv[1])) {
 		X = me_tri_decomp(A, B);
+    } else if(0 == strcmp("cholesky", argv[1])) {
+        X = cholesky_decomp(A, B);
+    } else if( 0 == strcmp("encholesky", argv[1])) {
+        X = en_cholesky_decomp(A, B);
+    } else if(0 == strcmp("chasing", argv[1])) {
+        X = chasing_method(A, B);
     }
 
 	if (NULL != X) {

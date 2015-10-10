@@ -11,7 +11,9 @@ static Matrix* gen_p(int ip[], int n);
 static void swap_dp(double** a, double** b);
 static void swap_d(double* a, double* b);
 static bool is_symmetrical(Matrix* M);
-static double check_order_main_det(Matrix* M, bool* gt, double x);
+static bool is_order_main_dets_nz(Matrix* M);
+static double check_order_main_det(Matrix* M, bool* ne);
+static bool is_diagnoal_dominance_3(Matrix* M);
 /**
 创建n阶方阵
 */
@@ -27,15 +29,19 @@ n_:矩阵的列数
 Matrix* create_matrix(int m_, int n_) {
     int i;
     assert(m_ > 0 && n_ > 0);
+    printf("create_matrix 1   %d\n", sizeof(Matrix));
     Matrix* M = (Matrix*)malloc(sizeof(Matrix));
+    printf("create_matrix 1.5   %d\n", sizeof(Matrix));
     if(NULL == M) return NULL;
     M->m = m_;
     M->n = n_;
+    printf("create_matrix 2\n");
     M->mem = (double**)malloc(sizeof(double*) * M->m);
     if(NULL == M->mem) {
         free(M);
         return NULL;
     }
+    printf("create_matrix 3\n");
     //请注意这里实际上是一个大的一维空间
     M->mem[0] = (double*)malloc(sizeof(double) * M->m * M->n);
     if(NULL == M->mem[0]) {
@@ -109,10 +115,12 @@ Matrix* mul(Matrix* A, Matrix* B) {
 	assert(A->n == B->m);
 	Matrix* ret = create_matrix(A->m, B->n);
 	int i, j, k;
-	for (i = 0; i < ret->m; i++)
-		for (j = 0; j < ret->n; i++)
+	for (i = 0; i < ret->m; i++) {
+		for (j = 0; j < ret->n; j++) {
 			for (ret->mem[i][j] = 0, k = 0; k < A->n; k++)
 				ret->mem[i][j] += A->mem[i][k] * B->mem[k][j];
+        }
+    }
 	return ret;
 }
 
@@ -161,7 +169,7 @@ double det(Matrix* M) {
 /**
 求解A为上三角形的线性方程组
 */
-Matrix* up_tri_solv(Matrix* A, Matrix* B) {
+Matrix* ru_tri_solv(Matrix* A, Matrix* B) {
 	int i, j;
 	Matrix* X = create_matrix(B->m, 1);
 	if (NULL == X) return NULL;
@@ -178,7 +186,7 @@ Matrix* up_tri_solv(Matrix* A, Matrix* B) {
 /**
 求解A为下三角形的线性方程组
 */
-Matrix* down_tri_solv(Matrix* A, Matrix* B) {
+Matrix* lb_tri_solv(Matrix* A, Matrix* B) {
 	int i, j;
 	Matrix* X = create_matrix(B->m, 1);
 	if (NULL == X) return NULL;
@@ -220,7 +228,7 @@ Matrix* gauss_elim(Matrix* A, Matrix* B) {
             printf("\n");
         }
     }
-	return up_tri_solv(A, B);
+	return ru_tri_solv(A, B);
 }
 
 /**
@@ -261,7 +269,7 @@ Matrix* me_gauss_elim(Matrix* A, Matrix* B) {
             printf("\n");
         }
     }
-	return up_tri_solv(A, B);
+	return ru_tri_solv(A, B);
 }
 
 
@@ -305,8 +313,8 @@ Matrix* tri_decomp(Matrix* A, Matrix* B) {
 	print_matrix(U);
 
 	//解算方程组
-	Matrix* Y = down_tri_solv(L, B);
-	Matrix* X = up_tri_solv(U, Y);
+	Matrix* Y = lb_tri_solv(L, B);
+	Matrix* X = ru_tri_solv(U, Y);
 	free(L); free(U); free(Y);
 	return X;
 }
@@ -383,8 +391,8 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
 	print_matrix(U);
 
 	//解算方程组
-	Matrix* Y = down_tri_solv(L, B);
-	Matrix* X = up_tri_solv(U, Y);
+	Matrix* Y = lb_tri_solv(L, B);
+	Matrix* X = ru_tri_solv(U, Y);
 	free(L); free(U); free(Y); free(P);
 	return X;
 
@@ -394,42 +402,198 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
 楚列斯基分解
 */
 Matrix* cholesky_decomp(Matrix* A, Matrix* B) {
+    int i, j, k;
+    Matrix *U, *L = create_matrix(A->m, A->n);
+    Matrix *X, *Y;
     //检查系数矩阵A是否为对称正定矩阵
-    assert(is_symmetrical(A) && is_order_main_dets_gt_x(A, 0));
+    assert(is_symmetrical(A) && is_order_main_dets_nz(A));
+
+    for(i = 0; i < A->m; i++) {
+        for(j = 0; j <= i; j++) {
+            double s;
+            for(k = 0, s = 0; k < j; k++)
+                s += L->mem[i][k] * L->mem[j][k];
+            if(j == i) {
+                printf("i: %d, %lf, %lf, %lf\n", i, A->mem[i][j] - s, A->mem[i][j], s);
+                L->mem[i][j] = sqrt(A->mem[i][j] - s);
+            } else {
+                L->mem[i][j] = (A->mem[i][j] - s) / L->mem[j][j];
+            }
+            printf("the L matrix:\n");
+            print_matrix(L);
+        }
+        if (0 != print_steps) {
+            printf("step:%d\n", i + 1);
+            printf("L:\n");
+            print_matrix(L);            
+            printf("\n");
+        }
+    }
+    
+    U = transpose(L);
+    printf("the L matrix:\n");
+    print_matrix(L);
+    printf("the U matrix:\n");
+    print_matrix(U);
+
+    Y = lb_tri_solv(L, B);
+    X = ru_tri_solv(U, Y);
+    free(L); free(U); free(Y);
+    return X;
 }
 
 /**
-检查矩阵M的所有顺序主子式是否都大于x，一个频繁的用途是检查所有顺序主子式均大于0
-return: 当矩阵M的所有顺序主子式均大于x时，返回值为true
+enhanced cholesky decomposition, there is no sqrt()
 */
-bool is_order_main_dets_gt_x(Matrix* M, double x) {
-    bool gt_x = true;
-    double det = check_order_main_det(M, &gt_x, x);
-    return gt && (det > x); 
+Matrix* en_cholesky_decomp(Matrix* A, Matrix* B) {
+    int i, j, k;
+    Matrix *X, *Y, *U;
+    Matrix *L, *D, *LD; 
+    
+    //检查系数矩阵A是否为对称正定矩阵
+    assert(is_symmetrical(A) && is_order_main_dets_nz(A));
+
+    //we can use an array, but matrix is convenient
+    L = create_matrix(A->m, A->n);
+    D = create_matrix(A->m, A->n);
+    for(i = 0; i < A->m; i++) {
+        double s;
+        for(j = 0; j < i; j++) {
+            for(k = 0, s = 0; k < j; k++)
+                s += L->mem[i][k] * D->mem[k][k] * L->mem[j][k];
+            L->mem[i][j] = (A->mem[i][j] - s) / D->mem[j][j];
+        }
+        L->mem[i][i] = 1;
+        for(k = 0, s = 0; k < j; k++)
+            s += L->mem[i][k] * L->mem[i][k] * D->mem[k][k];
+        D->mem[i][i] = A->mem[i][i] - s;
+        
+        if (0 != print_steps) {
+            printf("step:%d\n", i + 1);
+            printf("L:\n");
+            print_matrix(L);            
+            printf("\n");
+        }
+    }
+    
+    U = transpose(L);
+    printf("the L matrix:\n");
+    print_matrix(L);
+    printf("the U matrix:\n");
+    print_matrix(U);
+    printf("the D matrix:\n");
+    print_matrix(D);
+
+    LD = mul(L, D);
+    Y = lb_tri_solv(LD, B);
+    X = ru_tri_solv(U, Y);
+    free(L); free(U); free(Y); free(D); free(LD);
+    return X;
+}
+
+static bool is_diagnoal_dominance_3(Matrix* M) {
+    int i, j;
+    assert(M->m == M->n);
+
+    for(i = 0; i < M->m; i++) {
+        if(i - 1 >= 0 && !(abs(M->mem[i][i]) > abs(M->mem[i][i - 1])))
+            return false;
+        if(i + 1 < M->n && !(abs(M->mem[i][i]) > abs(M->mem[i][i + 1])))
+            return false;
+    }
+    for(i = 0; i < M->m; i++) {
+        for(j = 0; j < M->n; j++) {
+            if(abs(i - j) > 1 && !DOUBLE_EQUAL(M->mem[i][j], 0))
+                return false; 
+            if(abs(i - j) <= 1 && DOUBLE_EQUAL(M->mem[i][j], 0))
+                return false;
+        }
+    }
+    return true;
+}
+
+Matrix* chasing_method(Matrix* A, Matrix* B) {
+    int i, j;
+    Matrix *L, *U;
+    Matrix *X, *Y;
+    assert(is_diagnoal_dominance_3(A));
+
+    L = create_matrix(A->m, A->n);
+    U = create_matrix(A->m, A->n);
+
+    /**
+    alpha[i]: L[i][i]
+    gamma[i]: L[i][i - 1]
+    beta[i]:  U[i][i + 1]
+    */
+    L->mem[0][0] = A->mem[0][0];
+    U->mem[0][0] = 1;
+    U->mem[0][1] = A->mem[0][1] / A->mem[0][0];
+    for(i = 1; i < A->m; i++) {
+        printf("step: %d\n", i);
+        L->mem[i][i - 1] = A->mem[i][i - 1];
+        L->mem[i][i] = A->mem[i][i] - A->mem[i][i - 1] * U->mem[i - 1][i];
+        U->mem[i][i + 1] = A->mem[i][i + 1] / L->mem[i][i];
+        U->mem[i][i] = 1;
+        if(0 != print_steps) {
+            printf("it is so simple that no steps to show you\n");
+        }
+    }
+
+    printf("the L matrix:\n");
+    print_matrix(L);
+    printf("the U matrix:\n");
+    print_matrix(U);
+
+    Y = lb_tri_solv(L, B);
+    printf("Y\n");
+    X = ru_tri_solv(U, Y);
+    printf("X\n");
+    free(L); free(U); free(Y);
+    return X;
+}
+
+/**
+检查矩阵M的所有顺序主子式是否
+return: 当矩阵M的所有顺序主子式
+*/
+static bool is_order_main_dets_nz(Matrix* M) {
+    //printf("what the fuck\n");
+    bool ne_x = true;
+    double det = check_order_main_det(M, &ne_x);
+    //printf("ne_x = %d", ne_x);
+    return ne_x && !DOUBLE_EQUAL(det, 0); 
 }
 
 
-static double check_order_main_det(Matrix* M, bool* gt, double x) {
+static double check_order_main_det(Matrix* M, bool* ne) {
     int i, j;
+    char sign;
     double ret, cofactor;
     double* memi;
     assert(M->m == M->n);
     if(1 == M->n)
         return M->mem[0][0];
+    if(false == *ne)
+        return 0;   //we can return anything, it is not important now
+
     for(i = M->m - 1, j = M->n - 1, ret = 0, memi = M->mem[i]; i >= 0; i--) {
         swap_dp(&M->mem[i], &memi);
         M->m--;
         M->n--;
 
-        cofactor = check_order_main_det(M, gt, x);
-        if(i == M->m - 1 && !(cofactor > x))
-            gt = false;
-        cofactor *= (i + j) & 1 == 1 ? -1 : 1; // Aij = (-1)i+jMij
-        ret += memi[j] * cofactor;
+        cofactor = check_order_main_det(M, ne);
+        sign = ((i + j) & 1) == 1 ? -1 : 1; // Aij = (-1)i+jMij
+        ret += memi[j] * sign * cofactor;
 
         //恢复M矩阵
         M->m++;
         M->n++;
+
+        if(i == M->m - 1 && DOUBLE_EQUAL(cofactor, 0)) {
+            //printf("i = %d,  cofactor = %lf \n", i, cofactor);
+            *ne = false; //we can not call return here, it could dirty matrix M
+        }
     }
 
     //恢复M矩阵
@@ -440,6 +604,15 @@ static double check_order_main_det(Matrix* M, bool* gt, double x) {
     return ret;
 }
 
+
+Matrix* transpose(Matrix* M) {
+    int i, j;
+    Matrix* T = create_matrix(M->n, M->m);
+    for(i = 0; i < M->m; i++)
+        for(j = 0; j < M->n; j++)
+            T->mem[j][i] = M->mem[i][j];
+    return T;
+}
 
 static bool is_symmetrical(Matrix* M) {
     int i, j;

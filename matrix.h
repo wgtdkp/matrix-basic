@@ -56,10 +56,18 @@ Matrix* tri_decomp(Matrix* A, Matrix* B);
 Matrix* me_tri_decomp(Matrix* A, Matrix* B);
 
 //A为上三角形时，求解线性方程组
-Matrix* up_tri_solv(Matrix* A, Matrix* B);
+Matrix* ru_tri_solv(Matrix* A, Matrix* B);
 
 //A为下三角时， 求解线性方程组
-Matrix* down_tri_solv(Matrix* A, Matrix* B);
+Matrix* lb_tri_solv(Matrix* A, Matrix* B);
+
+Matrix* cholesky_decomp(Matrix* A, Matrix* B);
+
+Matrix* en_cholesky_decomp(Matrix* A, Matrix* B);
+
+Matrix* chasing_method(Matrix* A, Matrix* B);
+
+Matrix* transpose(Matrix* M);
 
 
 #endif
