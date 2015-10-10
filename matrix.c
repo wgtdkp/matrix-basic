@@ -29,19 +29,15 @@ n_:矩阵的列数
 Matrix* create_matrix(int m_, int n_) {
     int i;
     assert(m_ > 0 && n_ > 0);
-    printf("create_matrix 1   %d\n", sizeof(Matrix));
     Matrix* M = (Matrix*)malloc(sizeof(Matrix));
-    printf("create_matrix 1.5   %d\n", sizeof(Matrix));
     if(NULL == M) return NULL;
     M->m = m_;
     M->n = n_;
-    printf("create_matrix 2\n");
     M->mem = (double**)malloc(sizeof(double*) * M->m);
     if(NULL == M->mem) {
         free(M);
         return NULL;
     }
-    printf("create_matrix 3\n");
     //请注意这里实际上是一个大的一维空间
     M->mem[0] = (double*)malloc(sizeof(double) * M->m * M->n);
     if(NULL == M->mem[0]) {
@@ -530,10 +526,10 @@ Matrix* chasing_method(Matrix* A, Matrix* B) {
     U->mem[0][0] = 1;
     U->mem[0][1] = A->mem[0][1] / A->mem[0][0];
     for(i = 1; i < A->m; i++) {
-        printf("step: %d\n", i);
         L->mem[i][i - 1] = A->mem[i][i - 1];
         L->mem[i][i] = A->mem[i][i] - A->mem[i][i - 1] * U->mem[i - 1][i];
-        U->mem[i][i + 1] = A->mem[i][i + 1] / L->mem[i][i];
+        if(i + 1 < A->m)    // try delete this line!
+            U->mem[i][i + 1] = A->mem[i][i + 1] / L->mem[i][i];
         U->mem[i][i] = 1;
         if(0 != print_steps) {
             printf("it is so simple that no steps to show you\n");
@@ -546,9 +542,7 @@ Matrix* chasing_method(Matrix* A, Matrix* B) {
     print_matrix(U);
 
     Y = lb_tri_solv(L, B);
-    printf("Y\n");
     X = ru_tri_solv(U, Y);
-    printf("X\n");
     free(L); free(U); free(Y);
     return X;
 }
