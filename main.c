@@ -91,9 +91,9 @@ int main(int argc, char* argv[]) {
 		printf("the solution is:\n");
 		print_matrix(X);
 	}
-	free(A);
-	free(B);
-	free(X);
+	destroy_matrix(A);
+	destroy_matrix(B);
+	destroy_matrix(X);
 
     return 0;
 }

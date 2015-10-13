@@ -14,6 +14,14 @@ typedef struct {
 	int m;
 	int n;
 	double** mem;
+
+    /*why we need this member 'alloc'?
+    as member 'mem' is designed to make 
+    line swap efficient. it possible that 
+    swap(&mem[0], &mem[i]) can dirty the 
+    memory allocation, and this is this 
+    'alloc' for.*/
+    double* alloc;
 } Matrix;
 
 //创建n阶方阵
