@@ -1,14 +1,17 @@
 #ifndef _MATRIX_H_
 #define _MATRIX_H_
 
-#define DOUBLE_EQUAL(x, y)  (x - y < 1e-6 && x - y > -1e-6)
+#define MAX(x, y)   ((x) > (y) ? (x) : (y))
+#define MIN(x, y)   ((x) < (y) ? (x) : (y))
+#define DOUBLE_EQUAL(x, y)  ((x) - (y) < 1e-6 && (x) - (y) > -1e-6)
+#define INF ((1LL << 31) - 1)
+
+extern int print_steps;
 
 typedef enum{
     false = 0,
     true = 1
 } bool;
-
-extern int print_steps;
 
 typedef struct {
 	int m;
@@ -24,6 +27,29 @@ typedef struct {
     double* alloc;
 } Matrix;
 
+typedef bool (*Comp)(double, double);
+static inline bool gt(double x, double y) {
+    return x > y;
+}
+
+static inline bool eq(double x, double y) {
+    return DOUBLE_EQUAL(x, y);
+}
+
+static inline bool ne(double x, double y) {
+    return !eq(x, y);
+}
+
+static inline bool lt(double x, double y) {
+    return !gt(x, y) && ne(x, y);
+}
+
+void swap_dp(double** a, double** b);
+void swap_d(double* a, double* b);
+static inline void swap_row(Matrix* M, int i, int j) {
+    swap_dp(&M->mem[i], &M->mem[j]);
+}
+
 //创建n阶方阵
 Matrix* create_matrix_n(int n);
 
@@ -35,6 +61,8 @@ Matrix* create_eye(int n);
 
 //销毁方阵
 void destroy_matrix(Matrix* M);
+
+void fill_matrix(Matrix* M, double x);
 
 //矩阵相乘
 Matrix* mul(Matrix* A, Matrix* B);
@@ -50,32 +78,12 @@ Matrix* shallow_copy(Matrix* M);
 
 //打印矩阵
 void print_matrix(Matrix* M);
-
-//高斯消去法解线性方程组 AX=B;
-Matrix* gauss_elim(Matrix* A, Matrix* B);
-
-//列主元消去法
-Matrix* me_gauss_elim(Matrix* A, Matrix* B);
-
-//矩阵的三角分解法(杜利特尔分解)
-Matrix* tri_decomp(Matrix* A, Matrix* B);
-
-//选主原的矩阵三角分解法
-Matrix* me_tri_decomp(Matrix* A, Matrix* B);
-
-//A为上三角形时，求解线性方程组
-Matrix* ru_tri_solv(Matrix* A, Matrix* B);
-
-//A为下三角时， 求解线性方程组
-Matrix* lb_tri_solv(Matrix* A, Matrix* B);
-
-Matrix* cholesky_decomp(Matrix* A, Matrix* B);
-
-Matrix* en_cholesky_decomp(Matrix* A, Matrix* B);
-
-Matrix* chasing_method(Matrix* A, Matrix* B);
-
+bool is_ordered_main_subdet(Matrix* M, Comp checker, double x);
+bool is_symmetrical(Matrix* M);
+bool is_const_similar(Matrix* M, Matrix* N, double* coeff);
 Matrix* transpose(Matrix* M);
+Matrix* inverse(Matrix* M);
 
+void swap_matrix(Matrix* M, Matrix* N);
 
 #endif
