@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (argc >= 4 && 0 == strcmp(argv[3], "step"))
-        print_steps = 1;
+        step = 1;
 
     scanf("%d", &n);
     A = create_matrix_n(n);
@@ -81,27 +81,27 @@ int main(int argc, char* argv[]) {
 	printf("\n");
 
     if(0 == strcmp("gauss", argv[1])) {
-        X = gauss_elim(A, B);
+        X = gauss_elim(A, B, step);
     } else if(0 == strcmp("megauss", argv[1])) {
-        X = me_gauss_elim(A, B);
+        X = me_gauss_elim(A, B, step);
     } else if(0 == strcmp("tri", argv[1])) {
-		X = tri_decomp(A, B);
+		X = tri_decomp(A, B, step);
     } else if(0 == strcmp("metri", argv[1])) {
-		X = me_tri_decomp(A, B);
+		X = me_tri_decomp(A, B, step);
     } else if(0 == strcmp("cholesky", argv[1])) {
-        X = cholesky_decomp(A, B);
+        X = cholesky_decomp(A, B, step);
     } else if( 0 == strcmp("encholesky", argv[1])) {
-        X = en_cholesky_decomp(A, B);
+        X = en_cholesky_decomp(A, B, step);
     } else if(0 == strcmp("chasing", argv[1])) {
-        X = chasing_method(A, B);
+        X = chasing_method(A, B, step);
     } else if(0 == strcmp("jacobi", argv[1])) {
-        X = jacobi_iter(A, B, 1e-6);
+        X = jacobi_iter(A, B, 1e-6, step);
     } else if(0 == strcmp("gauss_seidel", argv[1])) {
-        X = gauss_seidel_iter(A, B, 1e-6);
+        X = gauss_seidel_iter(A, B, 1e-6, step);
     } else if(0 == strcmp("sor", argv[1])) {
-        X = sor(A, B, 1, 1e-6);
+        X = sor(A, B, 1, 1e-6, step);
     } else if(0 == strcmp("pow", argv[1])) {
-        double eigen_value = pow_method(A);
+        double eigen_value = pow_method(A, step);
         printf("the biggest eigen value is: %lf\n", eigen_value);
     } else if(0 == strcmp("inv", argv[1])) {
         X = inverse(A);
@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
             test->mem[i][0] = arr[i];
         */
         Matrix* test = A;
-        printf("norm: %lf\n", norm(test, 2));
+        printf("norm: %lf\n", norm(test, 2, step));
     }
 
 	if (NULL != X) {

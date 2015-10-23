@@ -8,7 +8,7 @@
 description : calculate the biggest eigenvalue
     with the pow method.
 */
-double pow_method(Matrix* A)
+double pow_method(Matrix* A, bool step)
 {
     assert(A->m == A->n);
     Matrix* V = create_matrix(A->m, 1);
@@ -24,7 +24,7 @@ double pow_method(Matrix* A)
             destroy_matrix(last_U);
             return lambda1;
         }
-        if(print_steps) {
+        if(step) {
             printf("=== step %d ===\n", k);
             printf("U:\n");
             print_matrix(U);

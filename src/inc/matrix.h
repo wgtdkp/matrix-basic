@@ -5,8 +5,11 @@
 #define MIN(x, y)   ((x) < (y) ? (x) : (y))
 #define DOUBLE_EQUAL(x, y)  ((x) - (y) < 1e-6 && (x) - (y) > -1e-6)
 #define INF ((1LL << 31) - 1)
+#define IS_SQUARE(M)    ((M)->m == (M)->n)
+#define IS_VECTOR(V)    ((V)->n == 1)
+#define IS_EQUATION(A, B)   (IS_SQUARE((A)) && IS_VECTOR((B)) && (A)->m == (B)->m)
 
-extern int print_steps;
+extern int step;
 
 typedef enum{
     false = 0,

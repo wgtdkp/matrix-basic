@@ -10,7 +10,7 @@ description: calculate norm of vector and matrix.
 #include "norm.h"
 #include "eigenvalue.h"
 
-double norm(Matrix* M, unsigned int p)
+double norm(Matrix* M, unsigned int p, bool step)
 {
     double ret = .0;
     int i, j;
@@ -43,10 +43,15 @@ double norm(Matrix* M, unsigned int p)
         } else if(2 == p) {
             Matrix* MT = transpose(M);
             Matrix* MTM = mul(MT, M);
-            ret = pow_method(MTM);
+            ret = pow_method(MTM, false);
             ret = pow(ret, 0.5);
             destroy_matrix(MT);
             destroy_matrix(MTM);
+        } else if(3 == p) { //Frobenius norm
+            for(i = 0; i < M->m; i++)
+                for(j = 0; j < M->n; j++)
+                    ret += M->mem[i][j] * M->mem[i][j];
+            ret = pow(ret, 0.5);
         }
     }
     return ret;

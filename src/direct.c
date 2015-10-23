@@ -18,14 +18,12 @@ description: solve linear equation with
 #include <assert.h>
 
 static Matrix* gen_p(int ip[], int n);
-static bool is_diagnoal_dominance_3(Matrix* M);
-
 /**
 高斯消去法解线性方程组 AX=B;
 返回：线性方程组的解
 */
-Matrix* gauss_elim(Matrix* A, Matrix* B) {
-    assert(A->m == A->n);
+Matrix* gauss_elim(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
 
     int i, j, k;
     for(i = 0; i < A->m - 1; i++) {
@@ -37,11 +35,12 @@ Matrix* gauss_elim(Matrix* A, Matrix* B) {
         }
         for(k = i + 1; k < A->m; k++) {
             factor = A->mem[k][i] / A->mem[i][i];
-            for(j = i; j < A->n; j++)
+            for(j = i; j < A->n; j++) {
                 A->mem[k][j] -= A->mem[i][j] * factor;
+            }
             B->mem[k][0] -= B->mem[i][0] * factor;
         }
-        if(0 != print_steps) {
+        if(false != step) {
             printf("=== step %d ===\n", i + 1);
             printf("A:\n");
             print_matrix(A);
@@ -56,8 +55,8 @@ Matrix* gauss_elim(Matrix* A, Matrix* B) {
 /**
 列主元消去法
 */
-Matrix* me_gauss_elim(Matrix* A, Matrix* B) {
-    assert(A->m == A->n);
+Matrix* me_gauss_elim(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
 
     int i, j, k;
     for(i = 0; i < A->m - 1; i++) {
@@ -65,19 +64,20 @@ Matrix* me_gauss_elim(Matrix* A, Matrix* B) {
         int max_col;
         
         //选择头元素最大的行作为当前行
-        max_col_value = A->mem[i][i], max_col = i;
+        max_col_value = fabs(A->mem[i][i]), max_col = i;
         for(k = i + 1; k < A->m; k++) {
-            if(abs(A->mem[k][i]) > max_col_value) {
-                max_col_value = abs(A->mem[k][i]);
+            if(fabs(A->mem[k][i]) > max_col_value) {
+                max_col_value = fabs(A->mem[k][i]);
                 max_col = k;
             }
         }
+        printf("i: %d, max_col: %d\n", i, max_col);
         swap_dp(&A->mem[i], &A->mem[max_col]); //交换当前行与最大行
         swap_dp(&B->mem[i], &B->mem[max_col]);
 
         if(DOUBLE_EQUAL(A->mem[i][i], 0.0)) {
-            printf("error: gauss elimination failed, \
-                because A[%d][%d] is zero\n", i + 1, i + 1);
+            printf("error: me gauss elimination failed, "
+                "because A[%d][%d] is zero\n", i + 1, i + 1);
             return NULL;
         }
 
@@ -87,7 +87,7 @@ Matrix* me_gauss_elim(Matrix* A, Matrix* B) {
                 A->mem[k][j] -= A->mem[i][j] * factor;
             B->mem[k][0] -= B->mem[i][0] * factor;
         }
-        if(0 != print_steps) {
+        if(0 != step) {
             printf("=== step %d ===\n", i + 1);
             printf("A:\n");
             print_matrix(A);
@@ -102,8 +102,8 @@ Matrix* me_gauss_elim(Matrix* A, Matrix* B) {
 /**
 矩阵的三角分解法(杜利特尔分解)
 */
-Matrix* tri_decomp(Matrix* A, Matrix* B) {
-
+Matrix* tri_decomp(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
     assert(is_ordered_main_subdet(A, &ne, 0));
     int i, k, r;
     Matrix* L = create_matrix(A->m, A->n);
@@ -124,7 +124,7 @@ Matrix* tri_decomp(Matrix* A, Matrix* B) {
             }
             L->mem[i][r] = (A->mem[i][r] - s) / U->mem[r][r];
         }
-        if (0 != print_steps) {
+        if (0 != step) {
             printf("=== step %d ===\n", i + 1);
             printf("L:\n");
             print_matrix(L);
@@ -151,7 +151,8 @@ Matrix* tri_decomp(Matrix* A, Matrix* B) {
 /**
 选主原的矩阵三角分解法
 */
-Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
+Matrix* me_tri_decomp(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
     assert(is_ordered_main_subdet(A, &ne, 0));
 
     int i, k, r;
@@ -161,14 +162,14 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
     for(r = 0; r < A->m; r++) {
         
         //选主元
-        double max_s;
-        int max_s_index;
+        double max_s = 0; // make compiler happy
+        int max_s_index = 0; // make compiler happy
         for(i = r; i < A->n; i++) {
             double s;
             for(s = 0, k = 0; k < r; k++)
                 s += L->mem[i][k] * U->mem[k][r];
             s = fabs(A->mem[i][r] - s);
-            if(i == r || s > max_s) {
+            if(i == r || s > max_s) {   //i == r, init max_s and max_s_index
                 max_s = s;
                 max_s_index = i;
             }
@@ -208,7 +209,7 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
             }
             L->mem[i][r] = (A->mem[i][r] - s) / U->mem[r][r];
         }
-        if (0 != print_steps) {
+        if (0 != step) {
             printf("=== step %d ===\n", i + 1);
             printf("L:\n");
             print_matrix(L);
@@ -239,13 +240,18 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B) {
 /**
 楚列斯基分解
 */
-Matrix* cholesky_decomp(Matrix* A, Matrix* B) {
-    //检查系数矩阵A是否为对称正定矩阵
+Matrix* cholesky_decomp(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
     assert(is_symmetrical(A) && is_ordered_main_subdet(A, &gt, 0));
-
     int i, j, k;
     Matrix *X, *Y;
-    Matrix *U, *L = create_matrix(A->m, A->n);
+    Matrix *U, *L;
+    //检查系数矩阵A是否为对称正定矩阵
+    ///if(!is_symmetrical(A) || !is_ordered_main_subdet(A, &gt, 0)) {
+    //    printf("error: the matrix is not a symmetric positive definite.\n");
+    //    return NULL;
+    //}
+    L = create_matrix(A->m, A->n);
     for(i = 0; i < A->m; i++) {
         for(j = 0; j <= i; j++) {
             double s;
@@ -264,7 +270,7 @@ Matrix* cholesky_decomp(Matrix* A, Matrix* B) {
             else
                 L->mem[i][j] = (A->mem[i][j] - s) / L->mem[j][j];
         }
-        if (0 != print_steps) {
+        if (0 != step) {
             printf("=== step %d ===\n", i + 1);
             printf("L:\n");
             print_matrix(L);            
@@ -289,14 +295,17 @@ Matrix* cholesky_decomp(Matrix* A, Matrix* B) {
 /**
 enhanced cholesky decomposition, there is no sqrt()
 */
-Matrix* en_cholesky_decomp(Matrix* A, Matrix* B) {
-    //ordered main subdets should be != 0
-    assert(is_symmetrical(A) && is_ordered_main_subdet(A, &ne, 0));
-
+Matrix* en_cholesky_decomp(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
+    assert(is_symmetrical(A) && is_ordered_main_subdet(A, &gt, 0));
     int i, j, k;
     Matrix *X, *Y, *U;
     Matrix *L, *D, *LD; 
-
+    //检查系数矩阵A是否为对称正定矩阵
+    //if(!is_symmetrical(A) || !is_ordered_main_subdet(A, &gt, 0)) {
+    //    printf("error: the matrix is not a symmetric positive definite.\n");
+    //    return NULL;
+    //}
     //we can use an array, but matrix is convenient
     L = create_matrix(A->m, A->n);
     D = create_matrix(A->m, A->n);
@@ -312,7 +321,7 @@ Matrix* en_cholesky_decomp(Matrix* A, Matrix* B) {
             s += L->mem[i][k] * L->mem[i][k] * D->mem[k][k];
         D->mem[i][i] = A->mem[i][i] - s;
         
-        if (0 != print_steps) {
+        if (0 != step) {
             printf("=== step %d ===\n", i + 1);
             printf("L:\n");
             print_matrix(L);            
@@ -339,12 +348,16 @@ Matrix* en_cholesky_decomp(Matrix* A, Matrix* B) {
     return X;
 }
 
-Matrix* chasing_method(Matrix* A, Matrix* B) {
+Matrix* chasing_method(Matrix* A, Matrix* B, bool step) {
+    assert(IS_EQUATION(A, B));
     assert(is_diagnoal_dominance_3(A));
-
     int i;
     Matrix *L, *U;
     Matrix *X, *Y;
+    //if(!is_diagnoal_dominance_3(A)) {
+    //    printf("error: the matrix is not a 3 diagnoal dominance.\n");
+    //    return NULL;
+    //}
     L = create_matrix(A->m, A->n);
     U = create_matrix(A->m, A->n);
 
@@ -362,7 +375,7 @@ Matrix* chasing_method(Matrix* A, Matrix* B) {
         if(i + 1 < A->m)    // try delete this line!
             U->mem[i][i + 1] = A->mem[i][i + 1] / L->mem[i][i];
         U->mem[i][i] = 1;
-        if(0 != print_steps) {
+        if(0 != step) {
             printf("it is so simple that no steps to show you\n");
         }
     }
@@ -384,6 +397,7 @@ Matrix* chasing_method(Matrix* A, Matrix* B) {
 求解A为上三角形的线性方程组
 */
 Matrix* ru_tri_solv(Matrix* A, Matrix* B) {
+    assert(IS_EQUATION(A, B));
     int i, j;
     Matrix* X = create_matrix(B->m, 1);
 
@@ -401,6 +415,7 @@ Matrix* ru_tri_solv(Matrix* A, Matrix* B) {
 求解A为下三角形的线性方程组
 */
 Matrix* lb_tri_solv(Matrix* A, Matrix* B) {
+    assert(IS_EQUATION(A, B));
     int i, j;
     Matrix* X = create_matrix(B->m, 1);
 
@@ -422,7 +437,8 @@ static Matrix* gen_p(int ip[], int n) {
     return P;
 }
 
-static bool is_diagnoal_dominance_3(Matrix* M) {
+bool is_diagnoal_dominance_3(Matrix* M) {
+    //assert(IS_SQUARE(M));
     int i, j;
     if(M->m != M->n) return false;
     for(i = 0; i < M->m; i++) {

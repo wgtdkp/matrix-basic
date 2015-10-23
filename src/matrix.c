@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <math.h>
 
-int print_steps = 0;
+int step = 0;
 static double check_ordered_main_subdet(Matrix* M, bool* res, Comp checker, double x);
 
 /**
@@ -106,9 +106,10 @@ void print_matrix(Matrix* M) {
     int i, j;
     //printf("%d x %d\n", M->m, M->n);
     for(i = 0; i < M->m; i++) {
+        printf("[");
         for(j = 0; j < M->n; j++)
             printf("%lf\t", M->mem[i][j]);
-        printf("\n");
+        printf("]\n");
     }
 }
 
@@ -136,10 +137,12 @@ this improved matrix mulplication is better, cause it
 has better cache hit.
 */
 Matrix* mul(Matrix* A, Matrix* B) {
-    assert(A->n == B->m);
-
-    Matrix* ret = create_matrix(A->m, B->n);
+    Matrix* ret;
     int i, j, k;
+    if(A->n != B->m)
+        return NULL;
+    ret = create_matrix(A->m, B->n);
+    
     for (i = 0; i < ret->m; i++) {
         for (k = 0; k < A->n; k++) {
             int r = A->mem[i][k];
@@ -257,7 +260,6 @@ static double check_ordered_main_subdet(Matrix* M, bool* res, Comp checker, doub
     return ret;
 }
 
-
 Matrix* transpose(Matrix* M) {
     int i, j;
     Matrix* T = create_matrix(M->n, M->m);
@@ -272,7 +274,7 @@ bool is_symmetrical(Matrix* M) {
     if(M->m != M->n) return false;
     for(i = 0; i < M->m; i++)
         for(j = i; j < M->n; j++)
-            if(M->mem[i][j] != M->mem[j][i])
+            if(!DOUBLE_EQUAL(M->mem[i][j], M->mem[j][i]))
                 return false;
     return true;
 }

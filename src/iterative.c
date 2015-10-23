@@ -23,10 +23,10 @@ description: solve linear equation with
     here we give the raw method.
     The ending condition is |norm(X(k+1), INF) - norm(X(k), INF)| < 1e-6
 */
-Matrix* jacobi_iter(Matrix* A, Matrix* B, double delta)
+Matrix* jacobi_iter(Matrix* A, Matrix* B, double delta, bool step)
 {
-    assert(A->m == A->n);
-    assert(A->m == B->m && B->n == 1);
+    assert(IS_EQUATION(A, B));
+
     Matrix* X[2];
     int k, i, j, cnt = 0;
     const int max_loop = 100;
@@ -43,8 +43,8 @@ Matrix* jacobi_iter(Matrix* A, Matrix* B, double delta)
             norm_inf = MAX(norm_inf, fabs(X[1]->mem[i][0] - X[0]->mem[i][0]));
         }
         swap_matrix(X[0], X[1]);
-        if(print_steps) {
-            printf("===step %d ===\n", k);
+        if(step) {
+            printf("=== step %d ===\n", k);
             printf("delta: %lf\n", norm_inf);
             printf("X: \n");
             print_matrix(X[0]);
@@ -76,10 +76,10 @@ description: solve linear equation with
      thought it's definition is more complex 
      than jacobi iteration.
 */
-Matrix* gauss_seidel_iter(Matrix* A, Matrix* B, double delta)
+Matrix* gauss_seidel_iter(Matrix* A, Matrix* B, double delta, bool step)
 {
-    assert(A->m == A->n);
-    assert(A->m == B->m && B->n == 1);
+    assert(IS_EQUATION(A, B));
+
     int k, i, j, cnt = 0;
     const int max_loop = 100;
     double norm_inf, last_norm_inf = (double)INF;
@@ -94,9 +94,9 @@ Matrix* gauss_seidel_iter(Matrix* A, Matrix* B, double delta)
             X->mem[i][0] = (B->mem[i][0] - sum) / A->mem[i][i];
             norm_inf = MAX(norm_inf, fabs(X->mem[i][0] - xi));
         }
-        printf("nrom: %lf\n", norm_inf);
-        if(print_steps) {
-            printf("===step %d ===\n", k);
+        //printf("nrom: %lf\n", norm_inf);
+        if(step) {
+            printf("=== step %d ===\n", k);
             printf("delta: %lf\n", norm_inf);
             printf("X: \n");
             print_matrix(X);
@@ -123,10 +123,10 @@ DIVERGENT:
 description: solve linear equation with
     successive over relaxation methond.
 */
-Matrix* sor(Matrix* A, Matrix* B, double w, double delta)
+Matrix* sor(Matrix* A, Matrix* B, double w, double delta, bool step)
 {
-    assert(A->m == A->n);
-    assert(A->m == B->m && B->n == 1);
+    assert(IS_EQUATION(A, B));
+
     int k, i, j, cnt = 0;
     const int max_loop = 100;
     double norm_inf, last_norm_inf = (double)INF;
@@ -141,8 +141,8 @@ Matrix* sor(Matrix* A, Matrix* B, double w, double delta)
             X->mem[i][0] += w * (B->mem[i][0] - sum) / A->mem[i][i];
             norm_inf = MAX(norm_inf, fabs(X->mem[i][0] - xi));
         }
-        if(print_steps) {
-            printf("===step %d ===\n", k);
+        if(step) {
+            printf("=== step %d ===\n", k);
             printf("delta: %lf\n", norm_inf);
             printf("X: \n");
             print_matrix(X);
