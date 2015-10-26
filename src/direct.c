@@ -17,7 +17,8 @@ description: solve linear equation with
 #include <math.h>
 #include <assert.h>
 
-static Matrix* gen_p(int ip[], int n);
+//static Matrix* gen_p(int ip[], int n);
+
 /**
 高斯消去法解线性方程组 AX=B;
 返回：线性方程组的解
@@ -117,7 +118,7 @@ Matrix* tri_decomp(Matrix* A, Matrix* B, bool step) {
             for(s = 0, k = 0; k < r; k++)
                 s += L->mem[i][k] * U->mem[k][r];
             if(DOUBLE_EQUAL(U->mem[r][r], 0)) {
-                destroy_matrix(L); destroy_matrix(U);
+                destroy_matrix(&L); destroy_matrix(&U);
                 printf("error: triangular decomposition failed, \
                     because U[%d][%d] is zero\n", r + 1, r + 1);
                 return NULL;
@@ -142,9 +143,9 @@ Matrix* tri_decomp(Matrix* A, Matrix* B, bool step) {
     //解算方程组
     Matrix* Y = lb_tri_solv(L, B);
     Matrix* X = ru_tri_solv(U, Y);
-    destroy_matrix(L); 
-    destroy_matrix(U); 
-    destroy_matrix(Y);
+    destroy_matrix(&L); 
+    destroy_matrix(&U); 
+    destroy_matrix(&Y);
     return X;
 }
 
@@ -202,7 +203,7 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B, bool step) {
             for(s = 0, k = 0; k < r; k++)
                 s += L->mem[i][k] * U->mem[k][r];   //这里有重复计算
             if(DOUBLE_EQUAL(U->mem[r][r], 0)) {
-                destroy_matrix(L); destroy_matrix(U); destroy_matrix(P);
+                destroy_matrix(&L); destroy_matrix(&U); destroy_matrix(&P);
                 printf("error: triangular decomposition failed, \
                     because U[%d][%d] is zero\n", r + 1, r + 1);
                 return NULL;
@@ -229,10 +230,10 @@ Matrix* me_tri_decomp(Matrix* A, Matrix* B, bool step) {
     //解算方程组
     Matrix* Y = lb_tri_solv(L, B);
     Matrix* X = ru_tri_solv(U, Y);
-    destroy_matrix(L); 
-    destroy_matrix(U); 
-    destroy_matrix(Y); 
-    destroy_matrix(P);
+    destroy_matrix(&L); 
+    destroy_matrix(&U); 
+    destroy_matrix(&Y); 
+    destroy_matrix(&P);
     return X;
 
 }
@@ -259,9 +260,9 @@ Matrix* cholesky_decomp(Matrix* A, Matrix* B, bool step) {
                 s += L->mem[i][k] * L->mem[j][k];
             if(j == i) {
                 if(A->mem[i][j] - s < 0) {
-                    destroy_matrix(L);
+                    destroy_matrix(&L);
                     printf("error: cholesky dcompsition failed, " 
-                        "because A->mem[%d][%d] = sqrt(%lf)\n", 
+                        "because A->mem[%d][%d] = sqrt(%.8lf)\n", 
                         i + 1, i + 1, A->mem[i][j] - s);
                     return NULL;
                 }
@@ -286,9 +287,9 @@ Matrix* cholesky_decomp(Matrix* A, Matrix* B, bool step) {
 
     Y = lb_tri_solv(L, B);
     X = ru_tri_solv(U, Y);
-    destroy_matrix(L); 
-    destroy_matrix(U); 
-    destroy_matrix(Y);
+    destroy_matrix(&L); 
+    destroy_matrix(&U); 
+    destroy_matrix(&Y);
     return X;
 }
 
@@ -340,11 +341,11 @@ Matrix* en_cholesky_decomp(Matrix* A, Matrix* B, bool step) {
     LD = mul(L, D);
     Y = lb_tri_solv(LD, B);
     X = ru_tri_solv(U, Y);
-    destroy_matrix(L); 
-    destroy_matrix(U); 
-    destroy_matrix(Y); 
-    destroy_matrix(D); 
-    destroy_matrix(LD);
+    destroy_matrix(&L); 
+    destroy_matrix(&U); 
+    destroy_matrix(&Y); 
+    destroy_matrix(&D); 
+    destroy_matrix(&LD);
     return X;
 }
 
@@ -387,9 +388,9 @@ Matrix* chasing_method(Matrix* A, Matrix* B, bool step) {
 
     Y = lb_tri_solv(L, B);
     X = ru_tri_solv(U, Y);
-    destroy_matrix(L); 
-    destroy_matrix(U); 
-    destroy_matrix(Y);
+    destroy_matrix(&L); 
+    destroy_matrix(&U); 
+    destroy_matrix(&Y);
     return X;
 }
 
@@ -429,6 +430,7 @@ Matrix* lb_tri_solv(Matrix* A, Matrix* B) {
     return X;
 }
 
+/*
 static Matrix* gen_p(int ip[], int n) {
     int i;
     Matrix* P = create_eye(n);
@@ -436,6 +438,7 @@ static Matrix* gen_p(int ip[], int n) {
         swap_dp(&P->mem[i], &P->mem[ip[i]]);
     return P;
 }
+*/
 
 bool is_diagnoal_dominance_3(Matrix* M) {
     //assert(IS_SQUARE(M));

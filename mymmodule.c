@@ -6,7 +6,7 @@
 #include "eigenvalue.h"
 #include "norm.h"
 
-#define LIST(l, i)      PyList_GetItem((l), (i))
+#define LIST(L, i)      PyList_GetItem((L), (i))
 
 static const char mym_doc[] = 
     "mym is a simple matrix library, it supports\n"
@@ -27,22 +27,26 @@ static int mym_matrix_init(MYM_Matrix* self, PyObject *args, PyObject* kwds);
 static PyObject* mym_matrix_size(MYM_Matrix* self);
 static PyObject* mym_matrix_copy(MYM_Matrix* self);
 static PyObject* mym_matrix_repr(MYM_Matrix* self);
-PyObject* mym_mul(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_det(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_trans(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_inv(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_me_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_me_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_en_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_chasing_method(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_jacobi_iter(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_gauss_seidel_iter(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_sor(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds);
-PyObject* mym_norm(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_eye(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_add(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_sub(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_mul(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_mul_cons(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_det(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_trans(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_inv(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_me_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_me_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_en_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_chasing_method(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_jacobi_iter(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_gauss_seidel_iter(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_sor(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds);
+static PyObject* mym_norm(PyObject* self, PyObject* args, PyObject* kwds);
 
 PyMODINIT_FUNC PyInit_mym(void);
 
@@ -68,7 +72,7 @@ static PyTypeObject MYM_Matrix_Type = {
     0,                         /* tp_getattr */
     0,                         /* tp_setattr */
     0,                         /* tp_reserved */
-    mym_matrix_repr,                         /* tp_repr */
+    (reprfunc)mym_matrix_repr,                         /* tp_repr */
     0,                         /* tp_as_number */
     0,                         /* tp_as_sequence */
     0,                         /* tp_as_mapping */
@@ -100,7 +104,11 @@ static PyTypeObject MYM_Matrix_Type = {
 };
 
 static PyMethodDef mym_methods[] = {
+    {"eye",     (PyCFunction)mym_eye, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("create eye.")},
+    {"add",     (PyCFunction)mym_add, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("add two Matrix.")},
+    {"sub",     (PyCFunction)mym_sub, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("make substraction.")},
     {"mul",     (PyCFunction)mym_mul, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("mul two Matrix.")},
+    {"mul_cons", (PyCFunction)mym_mul_cons, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("mul a constant.")},
     {"det",     (PyCFunction)mym_det, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("clculate the determinant.")},
     {"trans",   (PyCFunction)mym_trans, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("get the transpose matrix.")},
     {"inv",     (PyCFunction)mym_inv, METH_VARARGS | METH_KEYWORDS, PyDoc_STR("get the inverse matrix.")},
@@ -128,7 +136,7 @@ static struct PyModuleDef mym_module = {
     NULL, NULL, NULL, NULL
 };
 
-#define IS_MATRIX(m)    (PyObject_IsInstance((m), &MYM_Matrix_Type))
+#define IS_MATRIX(m)    (PyObject_IsInstance((m), (PyObject*)(&MYM_Matrix_Type)))
 #define IS_DOUBLE(x)    (PyFloat_Check((x)) || PyLong_Check((x)))
 
 static inline int mym_matrix_converter(PyObject* obj_m, Matrix** M)
@@ -138,13 +146,15 @@ static inline int mym_matrix_converter(PyObject* obj_m, Matrix** M)
         PyErr_SetString(PyExc_TypeError, "the arg should be mym.Matrix");
         return 0;
     }
-    tmp = ((MYM_Matrix*)obj_m)->M;
-    if(!IS_VECTOR(tmp) && !IS_SQUARE(tmp)) {
-        PyErr_SetString(PyExc_ValueError, \
-            "only square matrix and vector is supported now");
-        return 0;
+    if(IS_MATRIX(obj_m)) {
+        tmp = ((MYM_Matrix*)obj_m)->M;
+        if(!IS_VECTOR(tmp) && !IS_SQUARE(tmp)) {
+            PyErr_SetString(PyExc_ValueError, \
+                "only square matrix and vector is supported now");
+            return 0;
+        }
+        *M = tmp;
     }
-    *M = tmp;
     return 1;
 }
 
@@ -176,6 +186,7 @@ static PyObject* mym_matrix_new(PyTypeObject* type, PyObject* args, PyObject *kw
         self->M = NULL;
     return (PyObject*)self;
 }
+
 
 
 static void mym_matrix_dealloc(MYM_Matrix* self)
@@ -273,81 +284,24 @@ static PyObject* mym_matrix_repr(MYM_Matrix* self)
     return repr;
 }
 
-PyObject* mym_mul(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_eye(PyObject* self, PyObject* args, PyObject* kwds)
 {
-    Matrix *A, *B;
-    Matrix* M;
-    bool step = false;  //not used
-    static char* kwlist[] = {"A", "B", "step", NULL};
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, 
-        "O&O&|O&:mul", kwlist, 
-        &mym_matrix_converter, &A, 
-        &mym_matrix_converter, &B, 
-        &mym_bool_converter, &step)) {
+    int n;
+    static char* kwlist[] = {"n", NULL};
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, "i:eye", kwlist, &n))
         return NULL;
-    }
-    if(A->n != B->m) {
-        PyErr_SetString(PyExc_ValueError, \
-            "can't mul the two Matrixes");
-        return NULL;
-    }
-    M = mul(A, B);
-    return (PyObject*)mym_matrix_create(M);
-}
+    return (PyObject*)mym_matrix_create(create_eye(n));
+ }
 
-PyObject* mym_det(PyObject* self, PyObject* args, PyObject* kwds)
-{
-    Matrix* A;
-    bool step = false; //not used
-    static char* kwlist[] = {"A", "step", NULL};
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, 
-        "O&|O&:det", kwlist, 
-        &mym_matrix_converter, &A, 
-        &mym_bool_converter, &step)) {
-        return NULL;
+#define COMMON_ARGS_PARSING_A(args, kwds, name) Matrix* A;\
+    bool step = false;\
+    static char* kwlist[] = {"A", "step", NULL};\
+    if(!PyArg_ParseTupleAndKeywords(args, kwds, \
+        "O&|O&:"name, kwlist, \
+        &mym_matrix_converter, &A, \
+        &mym_bool_converter, &step)) {\
+        return NULL;\
     }
-    if(!IS_SQUARE(A)) {
-        PyErr_SetString(PyExc_ValueError, \
-            "only square matrix has determinant"); 
-        return NULL;
-    }
-    return PyFloat_FromDouble(det(A));
-}
-
-PyObject* mym_trans(PyObject* self, PyObject* args, PyObject* kwds)
-{
-    Matrix *A;
-    bool step = false; //not used
-    static char* kwlist[] = {"A", "step", NULL};
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, 
-        "O&|O&:trans", kwlist, 
-        &mym_matrix_converter, &A, 
-        &mym_bool_converter, &step)) {
-        return NULL;
-    }
-    return (PyObject*)mym_matrix_create(transpose(A));
-}
-
-PyObject* mym_inv(PyObject* self, PyObject* args, PyObject* kwds)
-{
-    Matrix *A;
-    Matrix* inv;
-    bool step = false; //not used
-    static char* kwlist[] = {"A", "step", NULL};
-    if(!PyArg_ParseTupleAndKeywords(args, kwds, 
-        "O&|O&:inv", kwlist, 
-        &mym_matrix_converter, &A, 
-        &mym_bool_converter, &step)) {
-        return NULL;
-    }
-    inv = inverse(A);
-    if(NULL == inv) {
-        PyErr_SetString(PyExc_ValueError, \
-            "the matrix is a singular matrix, no inervse matrix");
-        return NULL;
-    }
-    return (PyObject*)mym_matrix_create(inv);
-}
 
 #define COMMON_ARGS_PARSING_A_B(args, kwds, name) Matrix *A, *B;\
     bool step = false;\
@@ -359,32 +313,126 @@ PyObject* mym_inv(PyObject* self, PyObject* args, PyObject* kwds)
         &mym_matrix_converter, &B, \
         &mym_bool_converter, &step)) {\
         return NULL;\
-    }\
-    EQUATION_CHECK(A, B)
+    }
+
+static PyObject* mym_mul(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    COMMON_ARGS_PARSING_A_B(args, kwds, "mul")
+    if(A->n != B->m) {
+        PyErr_SetString(PyExc_ValueError, \
+            "can't mul the two Matrixes");
+        return NULL;
+    }
+
+    M = mul(A, B);
+    return (PyObject*)mym_matrix_create(M);
+}
+
+
+static PyObject* mym_mul_cons(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    Matrix* A;
+    double x;
+    bool step = false;
+    static char* kwlist[] = {"A", "x", "step", NULL};
+    if(!PyArg_ParseTupleAndKeywords((args), (kwds), \
+        "O&d|O&:mul_cons", kwlist, \
+        &mym_matrix_converter, &A, \
+        &x, \
+        &mym_bool_converter, &step)) {
+        return NULL;
+    }
+    return (PyObject*)mym_matrix_create(mul_cons(A, x));
+}
+
+
+static PyObject* mym_add(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    COMMON_ARGS_PARSING_A_B(args, kwds, "add")
+    if(!IS_SAME_SIZE(A, B)) {
+        PyErr_SetString(PyExc_ValueError, \
+            "can't add the two Matrixes, they have different size");
+        return NULL;
+    }
+
+    M = add(A, B);
+    return (PyObject*)mym_matrix_create(M);
+}
+
+static PyObject* mym_sub(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    COMMON_ARGS_PARSING_A_B(args, kwds, "sub")
+    if(!IS_SAME_SIZE(A, B)) {
+        PyErr_SetString(PyExc_ValueError, \
+            "can't make substraction, they have different size");
+        return NULL;
+    }
+
+    M = sub(A, B);
+    return (PyObject*)mym_matrix_create(M);
+}
+
+
+
+
+static PyObject* mym_det(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    COMMON_ARGS_PARSING_A(args, kwds, "det")
+    if(!IS_SQUARE(A)) {
+        PyErr_SetString(PyExc_ValueError, \
+            "only square matrix has determinant"); 
+        return NULL;
+    }
+    return PyFloat_FromDouble(det(A));
+}
+
+static PyObject* mym_trans(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    COMMON_ARGS_PARSING_A(args, kwds, "trans")
+    return (PyObject*)mym_matrix_create(transpose(A));
+}
+
+static PyObject* mym_inv(PyObject* self, PyObject* args, PyObject* kwds)
+{
+    Matrix* inv;
+    COMMON_ARGS_PARSING_A(args, kwds, "inv")
+    inv = inverse(A);
+    if(NULL == inv) {
+        PyErr_SetString(PyExc_ValueError, \
+            "the matrix is a singular matrix, no inervse matrix");
+        return NULL;
+    }
+    return (PyObject*)mym_matrix_create(inv);
+}
+
+    //EQUATION_CHECK(A, B)
 
 #define EQUATION_CHECK(A, B)    if(!IS_EQUATION((A), (B))) {\
         PyErr_SetString(PyExc_ValueError, \
             "the two matrixes is not a legal equation");\
         return NULL;\
-    }\
+    }
 
-PyObject* mym_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "gauss_elim")
+    EQUATION_CHECK(A, B)
     M = gauss_elim(A, B, step);
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_me_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_me_gauss_elim(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "me_gauss_elim")
+    EQUATION_CHECK(A, B)
     M = me_gauss_elim(A, B, step);
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "tri_decomp")
+    EQUATION_CHECK(A, B)
     if(!is_ordered_main_subdet(A, &ne, 0)) {
         PyErr_SetString(PyExc_ValueError, \
             "one of A matrix's ordered main sub determinant is zero, "
@@ -395,9 +443,10 @@ PyObject* mym_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_me_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_me_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "me_tri_decomp")
+    EQUATION_CHECK(A, B)
     if(!is_ordered_main_subdet(A, &ne, 0)) {
         PyErr_SetString(PyExc_ValueError, \
             "one of A matrix's ordered main sub determinant is zero, "
@@ -408,9 +457,10 @@ PyObject* mym_me_tri_decomp(PyObject* self, PyObject* args, PyObject* kwds)
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "cholesky_decomp")
+    EQUATION_CHECK(A, B)
     if(!(is_symmetrical(A) && is_ordered_main_subdet(A, &gt, 0))) {
         PyErr_SetString(PyExc_ValueError, \
             "the A matrix is not a symmetric positive definite");
@@ -420,9 +470,10 @@ PyObject* mym_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_en_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_en_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "en_cholesky_decomp")
+    EQUATION_CHECK(A, B)
     if(!(is_symmetrical(A) && is_ordered_main_subdet(A, &gt, 0))) {
         PyErr_SetString(PyExc_ValueError, \
             "the A matrix is not a symmetric positive definite");
@@ -432,9 +483,10 @@ PyObject* mym_en_cholesky_decomp(PyObject* self, PyObject* args, PyObject* kwds)
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_chasing_method(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_chasing_method(PyObject* self, PyObject* args, PyObject* kwds)
 {
     COMMON_ARGS_PARSING_A_B(args, kwds, "chasing_method")
+    EQUATION_CHECK(A, B)
     if(!is_diagnoal_dominance_3(A)) {
         PyErr_SetString(PyExc_ValueError, \
             "the matrix is not a 3 diagnoal dominance");
@@ -444,7 +496,7 @@ PyObject* mym_chasing_method(PyObject* self, PyObject* args, PyObject* kwds)
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_jacobi_iter(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_jacobi_iter(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A, *B;
     bool step = false;
@@ -459,11 +511,17 @@ PyObject* mym_jacobi_iter(PyObject* self, PyObject* args, PyObject* kwds)
         return NULL;
     }
     EQUATION_CHECK(A, B)
+    if(!is_jacobi_convergent(A, step)) {
+        PyErr_SetString(PyExc_ValueError, 
+            "the jacobi iteration is not convergent, "
+            "set 'step' True to get more information");
+        return NULL;
+    }
     M = jacobi_iter(A, B, delta, step);
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_gauss_seidel_iter(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_gauss_seidel_iter(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A, *B;
     bool step = false;
@@ -478,11 +536,17 @@ PyObject* mym_gauss_seidel_iter(PyObject* self, PyObject* args, PyObject* kwds)
         return NULL;
     }
     EQUATION_CHECK(A, B)
+    if(!is_gauss_seidel_convergent(A, step)) {
+        PyErr_SetString(PyExc_ValueError, 
+            "the jacobi iteration is not convergent, "
+            "set 'step' True to get more information");
+        return NULL;
+    }
     M = gauss_seidel_iter(A, B, delta, step);
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_sor(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_sor(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A, *B;
     bool step = false;
@@ -497,11 +561,18 @@ PyObject* mym_sor(PyObject* self, PyObject* args, PyObject* kwds)
         return NULL;
     }
     EQUATION_CHECK(A, B)
+    if(!is_sor_convergent(A, w, step)) {
+        PyErr_SetString(PyExc_ValueError, 
+            "the SOR iteration is not convergent, "
+            "set 'step' True to get more information");
+        return NULL;
+    }
     M = sor(A, B, w, delta, step);
+    //M = sor_homework(A, B, w, delta, step);
     return (PyObject*)mym_matrix_create(M);
 }
 
-PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A;
     bool step = false;
@@ -515,7 +586,7 @@ PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds)
     return PyFloat_FromDouble(pow_method(A, step));
 }
 
-PyObject* mym_norm(PyObject* self, PyObject* args, PyObject* kwds)
+static PyObject* mym_norm(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A;
     int p;

@@ -8,6 +8,8 @@
 #define IS_SQUARE(M)    ((M)->m == (M)->n)
 #define IS_VECTOR(V)    ((V)->n == 1)
 #define IS_EQUATION(A, B)   (IS_SQUARE((A)) && IS_VECTOR((B)) && (A)->m == (B)->m)
+#define IS_SAME_SIZE(A, B) ((A)->m == (B)->m && (A)->n == (B)->n)
+
 
 extern int step;
 
@@ -62,13 +64,21 @@ Matrix* create_matrix(int m_, int n_);
 //创建n阶单位阵
 Matrix* create_eye(int n);
 
+Matrix* create_cons(int n, double x);
+
 //销毁方阵
-void destroy_matrix(Matrix* M);
+void destroy_matrix(Matrix** M);
 
 void fill_matrix(Matrix* M, double x);
 
 //矩阵相乘
 Matrix* mul(Matrix* A, Matrix* B);
+
+Matrix* mul_cons(Matrix* A, double x);
+
+Matrix* sub(Matrix* A, Matrix* B);
+
+Matrix* add(Matrix* A, Matrix* B);
 
 //计算矩阵的行列式
 double det(Matrix* M);

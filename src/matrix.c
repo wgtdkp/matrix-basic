@@ -53,21 +53,27 @@ Matrix* create_matrix(int m_, int n_) {
 创建n阶单位阵
 */
 Matrix* create_eye(int n) {
+    return create_cons(n, 1.0);
+}
+
+Matrix* create_cons(int n, double x)
+{
     int i;
-	Matrix* M = create_matrix_n(n);
-	for (i = 0; i < M->m; i++)
-		M->mem[i][i] = 1;
-	return M;
+    Matrix* M = create_matrix_n(n);
+    for(i = 0; i < n; i++)
+        M->mem[i][i] = x;
+    return M;
 }
 
 /**
 销毁方阵M
 */
-void destroy_matrix(Matrix* M) {
+void destroy_matrix(Matrix** M) {
     if(NULL == M) return;
-    free(M->alloc);
-    free(M->mem);
-    free(M);
+    free((*M)->alloc);
+    free((*M)->mem);
+    free(*M);
+    *M = NULL;
 }
 
 /**
@@ -108,7 +114,7 @@ void print_matrix(Matrix* M) {
     for(i = 0; i < M->m; i++) {
         printf("[");
         for(j = 0; j < M->n; j++)
-            printf("%lf\t", M->mem[i][j]);
+            printf("%.8lf\t", M->mem[i][j]);
         printf("]\n");
     }
 }
@@ -136,21 +142,53 @@ Matrix* mul(Matrix* A, Matrix* B) {
 this improved matrix mulplication is better, cause it 
 has better cache hit.
 */
-Matrix* mul(Matrix* A, Matrix* B) {
-    Matrix* ret;
+Matrix* mul(Matrix* A, Matrix* B)
+{
+    assert(A->n == B->m);
     int i, j, k;
-    if(A->n != B->m)
-        return NULL;
+    Matrix* ret;
     ret = create_matrix(A->m, B->n);
-    
     for (i = 0; i < ret->m; i++) {
         for (k = 0; k < A->n; k++) {
-            int r = A->mem[i][k];
-            for (j = 0; j < ret->n; j++)
+            double r = A->mem[i][k];
+            for (j = 0; j < ret->n; j++) {
                 ret->mem[i][j] += r * B->mem[k][j];
+            }
         }
     }
     return ret;
+}
+
+Matrix* mul_cons(Matrix* A, double x)
+{
+    int i, j;
+    Matrix* res = copy(A);
+    for(i = 0; i < A->m; i++)
+        for(j = 0; j < A->n; j++)
+            res->mem[i][j] *= x;
+    return res;
+}
+
+Matrix* add(Matrix* A, Matrix* B)
+{
+    assert(IS_SAME_SIZE(A, B));
+    int i, j;
+    Matrix *res = copy(A);
+    for(i = 0; i < A->m; i++)
+        for(j = 0; j < A->n; j++)
+            res->mem[i][j] += B->mem[i][j];
+    return res;
+}
+
+Matrix* sub(Matrix* A, Matrix* B)
+{
+    assert(IS_SAME_SIZE(A, B));
+    int i, j;
+    Matrix* res = copy(A);
+    for(i = 0; i < A->m; i++)
+        for(j = 0; j < A->n; j++)
+            res->mem[i][j] -= B->mem[i][j];
+    return res;
 }
 
 /**
@@ -159,7 +197,7 @@ Matrix* mul(Matrix* A, Matrix* B) {
 2.当数值较大时，计算存在误差
 */
 double det(Matrix* M) {
-    assert(M->m == M->n);
+    assert(IS_SQUARE(A));
 
     int i, j;
     double ret, cofactor;
@@ -205,7 +243,7 @@ double det(Matrix* M) {
 the wrapper of check_ordered_main_subdet()
 */
 bool is_ordered_main_subdet(Matrix* M, Comp checker, double x) {
-    assert(M->m == M->n);
+    assert(IS_SQUARE(A));
 
     bool res = true;
     double det = check_ordered_main_subdet(M, &res, checker, x);
@@ -271,7 +309,8 @@ Matrix* transpose(Matrix* M) {
 
 bool is_symmetrical(Matrix* M) {
     int i, j;
-    if(M->m != M->n) return false;
+    if(M->m != M->n) 
+        return false;
     for(i = 0; i < M->m; i++)
         for(j = i; j < M->n; j++)
             if(!DOUBLE_EQUAL(M->mem[i][j], M->mem[j][i]))
@@ -287,7 +326,7 @@ description: check if the two matrixes satisfy:
 bool is_const_similar(Matrix* M, Matrix* N, double* coeff)
 {
     int i, j;
-    if(M->m != N->m || M->n != N->n)
+    if(!IS_SAME_SIZE(M, N))
         return false;
     
     for(i = 0; i < M->m; i++)
@@ -335,7 +374,7 @@ return: if inverse matrix does not exist, return NULL.
 */
 Matrix* inverse(Matrix* A)
 {
-    assert(A->m == A->n);
+    assert(IS_SQUARE(A));
     int i, j, k;
     Matrix* inv = create_eye(A->m);
     for(i = 0; i < A->m - 1; i++) {
@@ -377,7 +416,7 @@ Matrix* inverse(Matrix* A)
     return inv;
 
 NO_INV:
-    destroy_matrix(inv);
+    destroy_matrix(&inv);
     printf("error: the matrix is a singular "
         "matrix, no inervse matrix!\n");
     return NULL;

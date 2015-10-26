@@ -45,8 +45,8 @@ double norm(Matrix* M, unsigned int p, bool step)
             Matrix* MTM = mul(MT, M);
             ret = pow_method(MTM, false);
             ret = pow(ret, 0.5);
-            destroy_matrix(MT);
-            destroy_matrix(MTM);
+            destroy_matrix(&MT);
+            destroy_matrix(&MTM);
         } else if(3 == p) { //Frobenius norm
             for(i = 0; i < M->m; i++)
                 for(j = 0; j < M->n; j++)

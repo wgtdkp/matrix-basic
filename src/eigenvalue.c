@@ -20,8 +20,8 @@ double pow_method(Matrix* A, bool step)
     for(k = 1; k <= max_loop; k++) {
         U = mul(A, last_U);
         if(is_const_similar(U, last_U, &lambda1)) {
-            destroy_matrix(U);
-            destroy_matrix(last_U);
+            destroy_matrix(&U);
+            destroy_matrix(&last_U);
             return lambda1;
         }
         if(step) {
@@ -29,7 +29,7 @@ double pow_method(Matrix* A, bool step)
             printf("U:\n");
             print_matrix(U);
         }
-        destroy_matrix(last_U);
+        destroy_matrix(&last_U);
         last_U = U;
     }
     return 0;
