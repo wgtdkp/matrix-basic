@@ -76,11 +76,13 @@ void destroy_matrix(Matrix** M) {
     *M = NULL;
 }
 
+
+
 /**
 复制矩阵, 拷贝当前矩阵M
 返回：新生成的矩阵的拷贝
 */
-Matrix* copy(Matrix* M) {
+Matrix* copy(const Matrix* M) {
     Matrix* replica;
     replica = create_matrix(M->m, M->n);
     if(NULL == replica)
@@ -88,6 +90,17 @@ Matrix* copy(Matrix* M) {
 	memcpy(replica->mem[0], M->mem[0],\
         sizeof(double) * replica->m * replica->n);
     return replica;
+}
+
+/**
+inplace copy
+*/
+void copy_inp(Matrix* des, Matrix* src)
+{
+    if (!IS_VALID(des) || !IS_SAME_SIZE(des, src))
+        return;
+    memcpy(des->mem[0], src->mem[0],\
+        sizeof(double) * des->m * des->n);
 }
 
 /**
@@ -105,10 +118,19 @@ void fill_matrix(Matrix* M, double x)
             M->mem[i][j] = x;
 }
 
+void make_eye(Matrix* M)
+{
+    assert(IS_VALID(M) && IS_SQUARE(M));
+    int i;
+    memset((void*)M->alloc, 0, sizeof(double) * M->m * M->n);
+    for (i = 0; i < M->m; i++)
+        M->mem[i][i] = 1;
+}
+
 /**
 打印矩阵
 */
-void print_matrix(Matrix* M) {
+void print_matrix(const Matrix* M) {
     int i, j;
     //printf("%d x %d\n", M->m, M->n);
     for(i = 0; i < M->m; i++) {
@@ -142,7 +164,7 @@ Matrix* mul(Matrix* A, Matrix* B) {
 this improved matrix mulplication is better, cause it 
 has better cache hit.
 */
-Matrix* mul(Matrix* A, Matrix* B)
+Matrix* mul(const Matrix* A, const Matrix* B)
 {
     assert(A->n == B->m);
     int i, j, k;
@@ -159,36 +181,58 @@ Matrix* mul(Matrix* A, Matrix* B)
     return ret;
 }
 
-Matrix* mul_cons(Matrix* A, double x)
+void mul_inp(Matrix* A, const Matrix* B)
 {
-    int i, j;
+    Matrix* ret = mul(A, B);
+    copy_inp(A, ret);
+    destroy_matrix(&ret);
+}
+
+Matrix* mul_cons(const Matrix* A, double x)
+{
     Matrix* res = copy(A);
-    for(i = 0; i < A->m; i++)
-        for(j = 0; j < A->n; j++)
-            res->mem[i][j] *= x;
+    mul_cons_inp(res, x);
     return res;
 }
 
-Matrix* add(Matrix* A, Matrix* B)
+void mul_cons_inp(Matrix* A, double x)
 {
-    assert(IS_SAME_SIZE(A, B));
     int i, j;
+    for(i = 0; i < A->m; i++)
+        for(j = 0; j < A->n; j++)
+            A->mem[i][j] *= x;
+}
+
+Matrix* add(const Matrix* A, const Matrix* B)
+{
     Matrix *res = copy(A);
-    for(i = 0; i < A->m; i++)
-        for(j = 0; j < A->n; j++)
-            res->mem[i][j] += B->mem[i][j];
+    add_inp(res, B);
     return res;
 }
 
-Matrix* sub(Matrix* A, Matrix* B)
+void add_inp(Matrix* A, const Matrix* B)
 {
     assert(IS_SAME_SIZE(A, B));
     int i, j;
-    Matrix* res = copy(A);
     for(i = 0; i < A->m; i++)
         for(j = 0; j < A->n; j++)
-            res->mem[i][j] -= B->mem[i][j];
+            A->mem[i][j] += B->mem[i][j];
+}
+
+Matrix* sub(const Matrix* A, const Matrix* B)
+{
+    Matrix* res = copy(A);
+    sub_inp(res, B);
     return res;
+}
+
+void sub_inp(Matrix* A, const Matrix* B)
+{
+    assert(IS_SAME_SIZE(A, B));
+    int i, j;
+    for(i = 0; i < A->m; i++)
+        for(j = 0; j < A->n; j++)
+            A->mem[i][j] -= B->mem[i][j];
 }
 
 /**
@@ -298,7 +342,7 @@ static double check_ordered_main_subdet(Matrix* M, bool* res, Comp checker, doub
     return ret;
 }
 
-Matrix* transpose(Matrix* M) {
+Matrix* transpose(const Matrix* M) {
     int i, j;
     Matrix* T = create_matrix(M->n, M->m);
     for(i = 0; i < M->m; i++)
@@ -307,7 +351,7 @@ Matrix* transpose(Matrix* M) {
     return T;
 }
 
-bool is_symmetrical(Matrix* M) {
+bool is_symmetrical(const Matrix* M) {
     int i, j;
     if(M->m != M->n) 
         return false;
@@ -323,7 +367,7 @@ description: check if the two matrixes satisfy:
     M = coeff * N (coeff is an constant)
     If true, the coeff param stores the scale
 */
-bool is_const_similar(Matrix* M, Matrix* N, double* coeff)
+bool is_const_similar(const Matrix* M, const Matrix* N, double delta, double* coeff)
 {
     int i, j;
     if(!IS_SAME_SIZE(M, N))
@@ -331,8 +375,8 @@ bool is_const_similar(Matrix* M, Matrix* N, double* coeff)
     
     for(i = 0; i < M->m; i++)
         for(j = 0; j < M->n; j++) {
-            if(!DOUBLE_EQUAL(M->mem[i][j], .0) \
-                && !DOUBLE_EQUAL(M->mem[i][j], .0)) {
+            if(!DOUBLE_EQUAL_DELTA(M->mem[i][j], .0, delta) \
+                && !DOUBLE_EQUAL_DELTA(M->mem[i][j], .0, delta)) {
                 *coeff = M->mem[i][j] / N->mem[i][j];
                 goto GET;
             }
@@ -341,7 +385,8 @@ bool is_const_similar(Matrix* M, Matrix* N, double* coeff)
 GET:
     for(i = 0; i < M->m; i++)
         for(j = 0; j < M->n; j++) {
-            if(!DOUBLE_EQUAL((M->mem[i][j] / N->mem[i][j]) / (*coeff), 1.0))
+            if(!DOUBLE_EQUAL_DELAT((M->mem[i][j] / N->mem[i][j]) / (*coeff),
+                 1.0, delta))
                 return false;
         }
     return true;
@@ -368,8 +413,16 @@ void swap_d(double* a, double* b) {
     *b = tmp;
 }
 
+void swap_n(int* a, int* b)
+{
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
 /**
 description: get the inverse matrix using gauss elimination. 
+A will be modified
 return: if inverse matrix does not exist, return NULL.
 */
 Matrix* inverse(Matrix* A)

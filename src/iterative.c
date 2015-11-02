@@ -37,7 +37,7 @@ bool is_jacobi_convergent(Matrix* A, bool step)
                 L_U->mem[i][j] = -A->mem[i][j];
         }
     J = mul(D_inv, L_U);
-    rho = fabs(pow_method(J, false));
+    rho = fabs(pow_method(J, 1e-3, false));
     if(step) {
         printf("J : \n");
         print_matrix(J);

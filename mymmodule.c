@@ -576,14 +576,16 @@ static PyObject* mym_pow_method(PyObject* self, PyObject* args, PyObject* kwds)
 {
     Matrix *A;
     bool step = false;
-    static char* kwlist[] = {"A", "step", NULL};
+    double delta;
+    static char* kwlist[] = {"A", "step", "delta", NULL};
     if(!PyArg_ParseTupleAndKeywords(args, kwds, 
-        "O&|O&:pow_method", kwlist, 
-        &mym_matrix_converter, &A, 
+        "O&d|O&:pow_method", kwlist, 
+        &mym_matrix_converter, &A,
+        &delta,
         &mym_bool_converter, &step)) {
         return NULL;
     }
-    return PyFloat_FromDouble(pow_method(A, step));
+    return PyFloat_FromDouble(pow_method(A, delta, step));
 }
 
 static PyObject* mym_norm(PyObject* self, PyObject* args, PyObject* kwds)

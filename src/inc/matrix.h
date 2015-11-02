@@ -1,14 +1,17 @@
 #ifndef _MATRIX_H_
 #define _MATRIX_H_
 
+#define SIGN(x)    ((x) >= .0 ? 1 : -1)
 #define MAX(x, y)   ((x) > (y) ? (x) : (y))
 #define MIN(x, y)   ((x) < (y) ? (x) : (y))
 #define DOUBLE_EQUAL(x, y)  ((x) - (y) < 1e-6 && (x) - (y) > -1e-6)
+#define DOUBLE_EQUAL_DELTA(x, y, delta) ((x) - (y) < (delta) && (x) - (y) > -(delta))
 #define INF ((1LL << 31) - 1)
 #define IS_SQUARE(M)    ((M)->m == (M)->n)
 #define IS_VECTOR(V)    ((V)->n == 1)
 #define IS_EQUATION(A, B)   (IS_SQUARE((A)) && IS_VECTOR((B)) && (A)->m == (B)->m)
 #define IS_SAME_SIZE(A, B) ((A)->m == (B)->m && (A)->n == (B)->n)
+#define IS_VALID(M) (NULL != (M) && NULL != (M)->alloc && NULL != (M)->mem)
 
 
 extern int step;
@@ -51,6 +54,8 @@ static inline bool lt(double x, double y) {
 
 void swap_dp(double** a, double** b);
 void swap_d(double* a, double* b);
+void swap_n(int* a, int* b);
+
 static inline void swap_row(Matrix* M, int i, int j) {
     swap_dp(&M->mem[i], &M->mem[j]);
 }
@@ -72,19 +77,22 @@ void destroy_matrix(Matrix** M);
 void fill_matrix(Matrix* M, double x);
 
 //矩阵相乘
-Matrix* mul(Matrix* A, Matrix* B);
-
-Matrix* mul_cons(Matrix* A, double x);
-
+Matrix* mul(const Matrix* A, const Matrix* B);
+void mul_inp(Matrix* A, const Matrix* B);
+Matrix* mul_cons(const Matrix* A, double x);
+void mul_cons_inp(Matrix* A, double x);
 Matrix* sub(Matrix* A, Matrix* B);
-
+void sub_inp(Matrix* A, const Matrix* B);
 Matrix* add(Matrix* A, Matrix* B);
-
+void add_inp(Matrix* A, const Matrix* B);
 //计算矩阵的行列式
 double det(Matrix* M);
 
 //复制矩阵
-Matrix* copy(Matrix* M);
+Matrix* copy(const Matrix* M);
+void copy_inp(Matrix* des, const Matrix* src);
+
+void make_eye(Matrix* M);
 
 //浅复制
 Matrix* shallow_copy(Matrix* M);
@@ -93,7 +101,7 @@ Matrix* shallow_copy(Matrix* M);
 void print_matrix(Matrix* M);
 bool is_ordered_main_subdet(Matrix* M, Comp checker, double x);
 bool is_symmetrical(Matrix* M);
-bool is_const_similar(Matrix* M, Matrix* N, double* coeff);
+bool is_const_similar(Matrix* M, Matrix* N, double delta, double* coeff);
 Matrix* transpose(Matrix* M);
 Matrix* inverse(Matrix* M);
 

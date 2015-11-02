@@ -6,6 +6,14 @@ from mym import *
 #n = Matrix([[1, 2], [3, 4]])
 #print(mul(m, n))
 #print(det(m))
+
+A = Matrix([[7, 3, -2], 
+            [3, 4, -1], 
+            [-2, -1, 3]])
+
+print(pow_method(A, ))
+
+"""
 a = Matrix([[1, 2, 3, 4, 5], 
 		    [11, 23, 3, -9, 10],
             [19, 5, 9, 23, 0],
@@ -23,6 +31,8 @@ print("the A matrix is: ")
 print(a)
 print("gauss_elim the euqation's solution is: ")
 print(gauss_elim(A=a.copy(), B=b.copy(), step=False))
+
+"""
 
 """
 print("the A matrix is: ")
@@ -49,7 +59,7 @@ L = [[1,  11, 19, 7,  0],
      [0,  1,  4,  8,  6],
     ]
 """
-
+"""
 #symmetric positive definite matrix
 a = Matrix([[23, 2, 3], 
      [2, 5, 3], 
@@ -107,3 +117,4 @@ print("the A matrix's norm: ")
 print(norm(a, 1))
 print(norm(a, 2))
 print(norm(a, (1<<31) - 1))
+"""
