@@ -35,6 +35,12 @@ typedef struct {
     double* alloc;
 } Matrix;
 
+typedef struct {
+    int size;
+    double* mem;
+} Array;
+
+
 typedef bool (*Comp)(double, double);
 static inline bool gt(double x, double y) {
     return x > y;
@@ -60,11 +66,39 @@ static inline void swap_row(Matrix* M, int i, int j) {
     swap_dp(&M->mem[i], &M->mem[j]);
 }
 
+Array* create_array(int size);
+
+void static inline destroy_array(Array** arr)
+{
+    if (NULL == arr || NULL == *arr)
+        return;
+    free((*arr)->mem);
+    (*arr)->size = 0;
+    *arr = NULL;
+}
+
+void static inline fill_array(Array* arr, double x)
+{
+    memset(arr->mem, x, arr->size);
+}
+
 //创建n阶方阵
 Matrix* create_matrix_n(int n);
 
 //创建mxn阶方阵
 Matrix* create_matrix(int m_, int n_);
+
+/**
+创建n阶方阵
+*/
+Matrix* static inline create_matrix_n(int n) {
+    return create_matrix(n, n);
+}
+
+Matrix* static inline create_vector(int m)
+{
+    return create_matrix(m, 1);
+}
 
 //创建n阶单位阵
 Matrix* create_eye(int n);
@@ -78,7 +112,8 @@ void fill_matrix(Matrix* M, double x);
 
 //矩阵相乘
 Matrix* mul(const Matrix* A, const Matrix* B);
-void mul_inp(Matrix* A, const Matrix* B);
+void mul_inp_L(Matrix* lhs, const Matrix* rhs);
+void mul_inp_R(const Matrix* lhs, Matrix* rhs);
 Matrix* mul_cons(const Matrix* A, double x);
 void mul_cons_inp(Matrix* A, double x);
 Matrix* sub(Matrix* A, Matrix* B);

@@ -8,12 +8,24 @@
 int step = 0;
 static double check_ordered_main_subdet(Matrix* M, bool* res, Comp checker, double x);
 
-/**
-创建n阶方阵
-*/
-Matrix* create_matrix_n(int n) {
-    return create_matrix(n, n);
+
+Array* create_array(int size)
+{
+    assert(size > 0);
+    Array* arr;
+    arr = (Array*)Malloc(sizeof(Array));
+    if (NULL == arr)
+        return NULL;
+    arr->mem = (double*)malloc(sizeof(double) * size);
+    if (NULL == arr->mem) {
+        free(arr);
+        return NULL;
+    }
+    arr->size = size;
+    fill_array(arr, 0);
+    return arr;
 }
+
 
 /**
 创建mxn阶矩阵
@@ -48,6 +60,8 @@ Matrix* create_matrix(int m_, int n_) {
 
     return M;
 }
+
+
 
 /**
 创建n阶单位阵
@@ -164,28 +178,63 @@ Matrix* mul(Matrix* A, Matrix* B) {
 this improved matrix mulplication is better, cause it 
 has better cache hit.
 */
-Matrix* mul(const Matrix* A, const Matrix* B)
+Matrix* mul(const Matrix* lhs, const Matrix* rhs)
 {
-    assert(A->n == B->m);
+    assert(lhs->n == rhs->m);
     int i, j, k;
     Matrix* ret;
-    ret = create_matrix(A->m, B->n);
+    ret = create_matrix(lhs->m, rhs->n);
     for (i = 0; i < ret->m; i++) {
-        for (k = 0; k < A->n; k++) {
-            double r = A->mem[i][k];
+        for (k = 0; k < lhs->n; k++) {
+            double r = lhs->mem[i][k];
             for (j = 0; j < ret->n; j++) {
-                ret->mem[i][j] += r * B->mem[k][j];
+                ret->mem[i][j] += r * rhs->mem[k][j];
             }
         }
     }
     return ret;
 }
 
-void mul_inp(Matrix* A, const Matrix* B)
+void mul_inp_L(Matrix* lhs, const Matrix* rhs)
 {
-    Matrix* ret = mul(A, B);
-    copy_inp(A, ret);
-    destroy_matrix(&ret);
+    int i, j, k;
+    Array* tmp_row;
+    if (!IS_SQUARE(rhs) || lhs->n != rhs->m)
+        return; 
+    tmp_row = create_array(lhs->n);
+    for (i = 0; i < ret->m; i++) {
+        for (k = 0; k < lhs->n; k++) {
+            double r = lhs->mem[i][k];
+            for (j = 0; j < lhs->n; j++) {
+                tmp[j] += r * rhs->mem[k][j];
+            }
+        }
+        memcpy(lhs->mem[i], tmp_row->mem, lhs->n);
+        fill_array(tmp_row, 0);
+    }
+    destroy_array(&tmp_row);
+}
+
+
+void mul_inp_R(const Matrix* lhs, Matrix* rhs)
+{
+    int i, j, k;
+    Array* tmp_col;
+    if (!IS_SQUARE(lhs) || lhs->n != rhs->m)
+        return;
+    tmp_col = create_array(rhs->m);
+    for (j = 0; j < rhs->n; j++) {
+        for (k = 0; k < lhs->n; k++) {
+            double r = rhs->mem[k][j];
+            for (i = 0; i < lhs->m; i++) {
+                tmp_col[i] += lhs->mem[i][k] * r;
+            }
+        }
+        for (k = 0; k < rhs->m; k++)
+            rhs->mem[k][j] = tmp_col;
+        fill_array(tmp_col, 0);
+    }
+    destroy_array(&tmp_col);
 }
 
 Matrix* mul_cons(const Matrix* A, double x)
@@ -391,6 +440,14 @@ GET:
         }
     return true;
 }
+
+
+bool is_norm_similar(const Matrix* lhs, const Matrix* rhs, int p, double delta)
+{
+    Matrix* m_sub = sub_inp(lhs, rhs);
+    bool res = norm(m_sub, p, false) < delta;
+}
+
 
 void swap_matrix(Matrix* M, Matrix* N)
 {

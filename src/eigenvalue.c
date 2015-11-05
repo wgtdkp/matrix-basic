@@ -47,7 +47,7 @@ create a Householder reflect matrix with vector specified.
 @n: the size of return matrix, it is bigger than the vector
 size, and then the left right sub area of return matrix is an eye.
 */
-Matrix* householder(double coeff, int n, Matrix* w)
+static Matrix* householder(double coeff, int n, Matrix* w)
 {
     assert(IS_VECTOR(w));
     int i, j;
@@ -63,49 +63,157 @@ Matrix* householder(double coeff, int n, Matrix* w)
 }
 
 /**
-@method: 'H' stands for Householder trans, 'G' stands for Givens trans
-*/
-void qr_decomp(const Matrix* A, const char method, Matrix* Q, Matrix* R, bool step)
+ *QR decomposition with Householder transformation
+ *@return: return the Q matrix 
+ *    and R matrix is stored in A
+ *note: this function modifies A
+ */
+Matrix* qr_decomp_H(Matrix* A, bool step)
 {
     int i, j;
-    Matrix *q = NULL, *q_tmp, *r = NULL, *r_tmp;
-    Matrix* R_tmp;
-    if (NULL == Q || NULL == R)
-        return;
-    if ('H' == method) {
-        double sigma, beta;
-        Matrix* x = create_matrix(A->m, 1);
-        Matrix* u = x;
-        Matrix* h = NULL;
-        make_eye(Q);
-        copy_inp(R, A);
-        for (i = 0; i < R->m - 1; i++) {
-            for (j = i; j < R->m; j++)
-                x->mem[j-i][0] = R->mem[j][i];
-            x->m = R->m - i;
+    double sigma, beta;
+    Matrix* X = create_matrix(A->m, 1);
+    Matrix* U = X;
+    Matrix* H = NULL;
+    Matrix* Q = create_eye(A->m);
+    for (i = 0; i < A->m - 1; i++) {
+        for (j = i; j < A->m; j++)
+            X->mem[j-i][0] = A->mem[j][i];
+        X->m = A->m - i;
 
-            sigma = SIGN(x[0][0]) * norm(x, 2, false);
-            beta = sigma * (sigma + x->mem[0][0]);
-            u->mem[0][0] = x->mem[0][0] + sigma;    //it modifies x
-            h = householder(1.0/beta, R->m, u);
+        sigma = SIGN(X[0][0]) * norm(X, 2, false);
+        beta = sigma * (sigma + X->mem[0][0]);
+        U->mem[0][0] = X->mem[0][0] + sigma;    //it modifies X
+        H = householder(1.0/beta, A->m, U);
 
-            mul_inp(Q, h);
-            R_tmp = mul(h, R);
-            copy_inp(R, R_tmp);
+        mul_inp_L(Q, H);    //store result in Q
+        mul_inp_R(H, A);    //store result in R(A)
+
+        if (step) {
+            printf("H%d:\n", i + 1);
+            print_matrix(H);
+            printf("Q%d:\n", i + 1);
+            print_matrix(Q);
+            printf("A(R)%d:\n", i + 1);
+            print_matrix(A);
+        }
+        destroy_matrix(&H);
+    }
+    X->m = A->m;    //reset the size of X, otherwise, will cause memory leak
+    destroy_matrix(&X);
+    return Q;
+}
+
+/**
+ *QR decomposition with Givens transformation
+ *@return: return the Q matrix
+ *    and R matrix is stored in A
+ *note: this function modifies A
+ */
+Matrix* qr_decomp_G(Matrix* A, bool step)
+{
+    int i, j, k;
+    Matrix* P = create_eye(A->m);
+    Matrix* Q = create_eye(A->m);
+
+    for (i = 0; i < A->m; i++) {
+        for (k = i + 1; k < A->m; k++) {
+            double r = A->mem[i][i] * A->mem[i][i] + A->mem[k][i] * A->mem[k][i];
+            r = pow(r, 0.5);
+            P->mem[i][i] = A->mem[i][i] / r;
+            P->mem[i][k] = P->mem[k][i] / r;
+            P->mem[k][i] = -P->mem[i][k];
+            P->mem[k][k] = P->mem[i][i];
+
+            A->mem[i][i] = r;
+            A->mem[k][i] = 0;
+            mul_inp_L(Q, P);    //store result in Q
+            mul_inp_R(P, A);    //store result in A
+            make_eye(P);
             if (step) {
-                printf("H%d:\n", i + 1);
-                print_matrix(h);
+                printf("P%d:\n", i + 1);
+                print_matrix(P);
                 printf("Q%d:\n", i + 1);
                 print_matrix(Q);
-                printf("R%d:\n", i + 1);
-                print_matrix(R);
+                printf("A(R)%d:\n", i + 1);
+                print_matrix(A);
             }
-            destroy_matrix(h);
-            destroy_matrix(&R_tmp);
         }
-        x->m = A->m;    //reset the size of x, otherwise, will cause memory leak
-        destroy_matrix(&x);
-    } else if('G' == method) {
+    }
+    destroy_matrix(&P);
+    return Q;
+}
 
+void to_hessenberg(Matrix* A, bool step)
+{
+    int i, j;
+    double sigma, beta;
+    Matrix* X = create_matrix(A->m - 1, 1);
+    Matrix* U = X;
+    Matrix* H = NULL;
+    Matrix* Q = create_eye(A->m);
+    for (i = 0; i < A->m - 1; i++) {
+        for (j = i; j < A->m; j++)
+            X->mem[j-i][0] = A->mem[j][i];
+        X->m = A->m - 1 - i;
+
+        sigma = SIGN(X[0][0]) * norm(X, 2, false);
+        beta = sigma * (sigma + X->mem[0][0]);
+        U->mem[0][0] = X->mem[0][0] + sigma;    //it modifies X
+        H = householder(1.0/beta, A->m, U);
+
+        //Q = QH
+        mul_inp_L(Q, H);    //store result in Q
+
+        //A = HAH
+        mul_inp_R(H, A);    //store result in R(A)
+        mul_inp_L(A, H);
+
+        if (step) {
+            printf("H%d:\n", i + 1);
+            print_matrix(H);
+            printf("Q%d:\n", i + 1);
+            print_matrix(Q);
+            printf("A(R)%d:\n", i + 1);
+            print_matrix(A);
+        }
+        destroy_matrix(&H);
+    }
+    X->m = A->m - 1;    //reset the size of X, otherwise, will cause memory leak
+    destroy_matrix(&X);
+    destroy_matrix(&Q);
+    //return Q;    
+}
+
+/**
+ *QR method to solve the eigenvalue problem
+ *@return: the transformed matrix is stored in A
+ */
+void qr_method(Matrix* A, double delta, bool step)
+{
+    int i;
+    Matirx *Q, *A_last;
+    to_hessenberg(A, false);
+    if (step) {
+        printf("convert A matrix to Hessenberg: \n");
+        print_matrix(A);
+    }
+    for (i = 0; ; i++) {
+        A_last = copy(A);
+        Q = qr_decomp_H(A, false);
+        mul_inp_L(A, Q);
+        destroy_matrix(&Q);
+        if (is_norm_similar(A_last, A, 2, delta)) {
+            destroy_matrix(A_last);
+            break;;
+        }
+        destroy_matrix(&A_last);
+        if (step) {
+            printf("step %d: \n", i + 1);
+            printf("Q matrix: \n");
+            print_matrix(Q);
+            printf("A matrix: \n");
+            print_matrix(A);
+        }
     }
 }
