@@ -7,6 +7,9 @@
 #include "norm.h"
 #include "iterative.h"
 #include "eigenvalue.h"
+#include "poly.h"
+#include "interpolation.h"
+#include "nonlinear.h"
 
 static char* app_name = "mym";
 
@@ -31,7 +34,7 @@ void usage(void) {
 
 int main(int argc, char* argv[]) {
 //int main(void) {
-    //char* argv[3] = {"mym", "jacobi", "./inputs/m.txt"};
+    //char* argv[3] = {"mym", "qr", "./inputs/m.txt"};
     //int argc = 3;
     int i, j, n;
     Matrix *A = NULL, *B = NULL, *X = NULL;
@@ -101,20 +104,83 @@ int main(int argc, char* argv[]) {
     } else if(0 == strcmp("sor", argv[1])) {
         X = sor(A, B, 1, 1e-6, step);
     } else if(0 == strcmp("pow", argv[1])) {
-        double eigen_value = pow_method(A, step);
+        double eigen_value = pow_method(A, 1e-6, step);
         printf("the biggest eigen value is: %lf\n", eigen_value);
     } else if(0 == strcmp("inv", argv[1])) {
         X = inverse(A);
-    } else {
-        /*
-        #define N (5)
-        Matrix* test = create_matrix(N, 1);
-        const int arr[N] = {-10, 3, 5, -7, 8};
+    } else if (0 == strcmp("qr", argv[1])) {
+        //Matrix* Q = qr_decomp_G(A, true);
+        //Matrix* R = A;
+        //printf("Q matrix: \n");
+        //print_matrix(Q);
+        //to_hessenberg(A, true);   
         int i;
-        double no;
-        for(i = 0; i < N; i++)
-            test->mem[i][0] = arr[i];
-        */
+        Complex* eigenvals;
+        eigenvals = (Complex*)malloc(sizeof(Complex) * 2 * (A->m - 1));
+        qr_method(A, 1e-3, true);
+        eigenvalues(eigenvals, A);
+        printf("eigenvalues: \n");
+        for (i = 0; i < A->m; i++) {
+            print_complex(&eigenvals[i]);
+            printf("\n");
+        }
+    } else if (0 == strcmp("poly", argv[1])) {
+        Poly* poly = NULL;
+        Poly* tmp = NULL;
+        //poly = create_poly(3, 0);
+        //printf("%.8lf\n", poly_value(poly, 2));
+        //poly_add_inp(&poly, create_poly(1, 3));
+        //poly_add_inp(&poly, create_poly(-3, 2));
+        //poly_add_inp(&poly, create_poly(2, 1));
+        //print_poly(poly);
+        //poly_add_inp(&tmp, create_poly(1, 1));
+        //poly_add_inp(&tmp, create_poly(-1, 0));
+        //tmp = poly_copy(poly);
+        //tmp = create_poly(1, 0);
+        //poly_pow_inp(&poly, 3);
+        //print_poly(poly);
+        //printf("poly_value: %.6lf\n", poly_value(poly, 5));
+        //poly_deriv_inp(&poly);
+        //poly_div_inp(&poly, tmp);
+        //print_poly(poly);
+        //destroy_poly(&poly);
+        //poly_div_inp(&poly, tmp);
+        //print_poly(poly);
+    } else if (0 == strcmp("ip", argv[1])) {
+        int i;
+        Poly* poly;
+        Poly** sp;
+        #define n (6)
+        double xarr[n] = {0, 1, 2, 3, 4, 5};
+        double yarr[n] = {1, 2, 1, 2, 1, 3};
+        //poly = newton(xarr, yarr, n);
+        //poly = lagrange(xarr, yarr, n);
+        sp = spline(xarr, yarr, n, 0, 0, 0);
+        for (i = 0; i < n - 1; i ++) {
+            printf("between [%.4lf, %.4lf]: ");
+            print_poly(sp[i]);
+            printf("diff at %.4lf is %.8lf\n", xarr[i], poly_value(sp[i], xarr[i]) - yarr[i]);
+            printf("diff at %.4lf is %.8lf\n", xarr[i+1], poly_value(sp[i], xarr[i+1]) - yarr[i+1]);
+        }
+        //print_poly(poly);
+        //for (i = 0; i < n; i++) {
+        //    double value = poly_value(poly, xarr[i]);
+        //    printf("poly_value(%.8lf) - yarr[%d] = %.8lf\n", xarr[i], i, value - yarr[i]);
+        //}
+    } else if (0 == strcmp("quadratic", argv[1])) {
+        Complex* roots;
+        Poly* poly = NULL;
+        poly_add_inp(&poly, create_poly(1, 2));
+        poly_add_inp(&poly, create_poly(6.94568726, 1));
+        poly_add_inp(&poly, create_poly(-1222.34529948, 0));
+        roots = (Complex*)malloc(sizeof(Complex) * 2 * (A->m - 1));
+        quadratic(roots, poly);
+        print_poly(poly);
+        print_complex(&roots[0]);
+        printf("\n");
+        print_complex(&roots[1]);
+        printf("\n");
+    } else {
         Matrix* test = A;
         printf("norm: %lf\n", norm(test, 2, step));
     }

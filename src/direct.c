@@ -377,15 +377,14 @@ Matrix* chasing_method(Matrix* A, Matrix* B, bool step) {
             U->mem[i][i + 1] = A->mem[i][i + 1] / L->mem[i][i];
         U->mem[i][i] = 1;
         if(0 != step) {
-            printf("it is so simple that no steps to show you\n");
+            printf("step %d", i);
+            printf("the L matrix:\n");
+            print_matrix(L);
+            printf("the U matrix:\n");
+            print_matrix(U);
         }
     }
-
-    printf("the L matrix:\n");
-    print_matrix(L);
-    printf("the U matrix:\n");
-    print_matrix(U);
-
+    
     Y = lb_tri_solv(L, B);
     X = ru_tri_solv(U, Y);
     destroy_matrix(&L); 

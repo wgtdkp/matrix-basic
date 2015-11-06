@@ -113,7 +113,7 @@ bool is_gauss_seidel_convergent(Matrix* A, bool step)
 
     D_L_inv = inverse(D_L);
     G = mul(D_L_inv, U);
-    rho = fabs(pow_method(G, false));
+    rho = fabs(pow_method(G, 1e-6, false));
     if(step) {
         printf("inverse of D - L : \n");
         print_matrix(D_L_inv);
@@ -197,7 +197,7 @@ bool is_sor_convergent(Matrix* A, double w, bool step)
     D_wD = mul_cons(D, 1 - w);
     D_wD_wU = add(D_wD, wU);
     Lw = mul(D_wL_inv, D_wD_wU);
-    rho = fabs(pow_method(Lw, false));
+    rho = fabs(pow_method(Lw, 1e-6, false));
     if(step) {
         printf("inverse of D - wL : \n");
         print_matrix(D_wL_inv);

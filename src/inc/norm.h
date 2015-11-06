@@ -11,7 +11,7 @@ double norm(Matrix* M, unsigned int p, bool step);
  */
 bool static inline is_norm_similar(const Matrix* lhs, const Matrix* rhs, int p, double delta)
 {
-    Matrix* m_sub = sub_inp(lhs, rhs);
+    Matrix* m_sub = sub(lhs, rhs);
     bool res = norm(m_sub, p, false) < delta;
     destroy_matrix(&m_sub);
     return res;

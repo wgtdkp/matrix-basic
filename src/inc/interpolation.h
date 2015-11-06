@@ -11,4 +11,10 @@ typedef struct {
 
 typedef Point Pos;
 
+Poly* vandermonde(const double* xarr, const double* yarr, int n);
+Poly* lagrange(const double* xarr, const double* yarr, int n);
+Poly* newton(const double* xarr, const double* yarr, int n);
+Poly** spline(const double* xarr, const double* yarr, int n, double a, double b, int type);
+
+
 #endif

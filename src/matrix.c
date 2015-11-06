@@ -13,7 +13,7 @@ Array* create_array(int size)
 {
     assert(size > 0);
     Array* arr;
-    arr = (Array*)Malloc(sizeof(Array));
+    arr = (Array*)malloc(sizeof(Array));
     if (NULL == arr)
         return NULL;
     arr->mem = (double*)malloc(sizeof(double) * size);
@@ -83,7 +83,8 @@ Matrix* create_cons(int n, double x)
 销毁方阵M
 */
 void destroy_matrix(Matrix** M) {
-    if(NULL == M) return;
+    if(NULL == M || NULL == *M) 
+        return;
     free((*M)->alloc);
     free((*M)->mem);
     free(*M);
@@ -109,7 +110,7 @@ Matrix* copy(const Matrix* M) {
 /**
 inplace copy
 */
-void copy_inp(Matrix* des, Matrix* src)
+void copy_inp(Matrix* des, const Matrix* src)
 {
     if (!IS_VALID(des) || !IS_SAME_SIZE(des, src))
         return;
@@ -201,15 +202,16 @@ void mul_inp_L(Matrix* lhs, const Matrix* rhs)
     Array* tmp_row;
     if (!IS_SQUARE(rhs) || lhs->n != rhs->m)
         return; 
+    if (lhs == rhs) return;
     tmp_row = create_array(lhs->n);
-    for (i = 0; i < ret->m; i++) {
+    for (i = 0; i < lhs->m; i++) {
         for (k = 0; k < lhs->n; k++) {
             double r = lhs->mem[i][k];
             for (j = 0; j < lhs->n; j++) {
-                tmp[j] += r * rhs->mem[k][j];
+                tmp_row->mem[j] += r * rhs->mem[k][j];
             }
         }
-        memcpy(lhs->mem[i], tmp_row->mem, lhs->n);
+        memcpy(lhs->mem[i], tmp_row->mem, sizeof(double) * tmp_row->size);
         fill_array(tmp_row, 0);
     }
     destroy_array(&tmp_row);
@@ -222,16 +224,17 @@ void mul_inp_R(const Matrix* lhs, Matrix* rhs)
     Array* tmp_col;
     if (!IS_SQUARE(lhs) || lhs->n != rhs->m)
         return;
+    if (lhs == rhs) return;
     tmp_col = create_array(rhs->m);
     for (j = 0; j < rhs->n; j++) {
         for (k = 0; k < lhs->n; k++) {
             double r = rhs->mem[k][j];
             for (i = 0; i < lhs->m; i++) {
-                tmp_col[i] += lhs->mem[i][k] * r;
+                tmp_col->mem[i] += lhs->mem[i][k] * r;
             }
         }
         for (k = 0; k < rhs->m; k++)
-            rhs->mem[k][j] = tmp_col;
+            rhs->mem[k][j] = tmp_col->mem[k];
         fill_array(tmp_col, 0);
     }
     destroy_array(&tmp_col);
@@ -290,7 +293,7 @@ void sub_inp(Matrix* A, const Matrix* B)
 2.当数值较大时，计算存在误差
 */
 double det(Matrix* M) {
-    assert(IS_SQUARE(A));
+    assert(IS_SQUARE(M));
 
     int i, j;
     double ret, cofactor;
@@ -336,7 +339,7 @@ double det(Matrix* M) {
 the wrapper of check_ordered_main_subdet()
 */
 bool is_ordered_main_subdet(Matrix* M, Comp checker, double x) {
-    assert(IS_SQUARE(A));
+    assert(IS_SQUARE(M));
 
     bool res = true;
     double det = check_ordered_main_subdet(M, &res, checker, x);
@@ -400,6 +403,14 @@ Matrix* transpose(const Matrix* M) {
     return T;
 }
 
+void transpose_inp(Matrix* M)
+{
+    int i, j;
+    for (i = 0; i < M->m; i++)
+        for (j = 0; j < M->n; j++)
+            swap_d(&M->mem[i][j], &M->mem[j][i]);
+}
+
 bool is_symmetrical(const Matrix* M) {
     int i, j;
     if(M->m != M->n) 
@@ -434,20 +445,12 @@ bool is_const_similar(const Matrix* M, const Matrix* N, double delta, double* co
 GET:
     for(i = 0; i < M->m; i++)
         for(j = 0; j < M->n; j++) {
-            if(!DOUBLE_EQUAL_DELAT((M->mem[i][j] / N->mem[i][j]) / (*coeff),
+            if(!DOUBLE_EQUAL_DELTA((M->mem[i][j] / N->mem[i][j]) / (*coeff),
                  1.0, delta))
                 return false;
         }
     return true;
 }
-
-
-bool is_norm_similar(const Matrix* lhs, const Matrix* rhs, int p, double delta)
-{
-    Matrix* m_sub = sub_inp(lhs, rhs);
-    bool res = norm(m_sub, p, false) < delta;
-}
-
 
 void swap_matrix(Matrix* M, Matrix* N)
 {

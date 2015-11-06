@@ -1,43 +1,61 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <math.h>
 #include "poly.h"
+#include "matrix.h"
 
-Poly* create_Poly(double coeff, int index)
+Poly* create_poly(double coeff, int index)
 {
-    Poly* node = (Poly*)malloc(sizeof(Poly));
-    if (NULL == node)
+    Poly* poly;
+    if (DOUBLE_EQUAL_DELTA(coeff, 0, 1e-12) || index < 0)
         return NULL;
-    node->coeff = coeff;
-    node->index = index;
-    node->next = NULL;
-    return node;
+
+    poly = (Poly*)malloc(sizeof(Poly));
+    if (NULL == poly)
+        return NULL;
+    poly->coeff = coeff;
+    poly->index = index;
+    poly->next = NULL;
+    return poly;
 }
 
-void destroy_poly(Poly** node)
+void destroy_poly(Poly** poly)
 {
     Poly* p;
-    if (NULL == node || NULL == *node)
+    if (NULL == poly || NULL == *poly)
         return;
-    for (p = *node; NULL != p; ) {
+    for (p = *poly; NULL != p; ) {
         Poly* tmp_next = p->next;
         free(p);
         p = tmp_next;
     }
-    *node = NULL;
+    *poly = NULL;
 }
 
-Poly* Poly_copy(const Poly* node)
+void print_poly(const Poly* poly)
 {
-    Poly *p, *q;
+    const Poly* p;
+    printf("[");
+    for (p = poly; NULL != p; p = p->next) {
+        printf("(%.6lf, %d), ", p->coeff, p->index);
+    }
+    printf("]\n");
+}
+
+Poly* poly_copy(const Poly* poly)
+{
+    Poly* p;
+    const Poly* q;
     Poly odd = {.next = NULL};
-    for (p = &odd, q = node; NULL != q;) {
-        p->next = create_Poly(q->coeff, q->index);
+    for (p = &odd, q = poly; NULL != q;) {
+        p->next = create_poly(q->coeff, q->index);
         p = p->next;
         q = q->next;
     }
     return odd.next;
 }
+
 
 
 /**
@@ -49,16 +67,18 @@ Poly* Poly_copy(const Poly* node)
 void poly_add_inp(Poly** lhs, Poly* rhs)
 {
     Poly odd;
-    Poly *p1, *q1, *p2, *q2;
+    Poly *p1, *q1, *p2;
     if (NULL == lhs)
         return;
+    if (*lhs == rhs)
+        return poly_mul_cons_inp(lhs, 2);
     odd.next = *lhs;
     p1 = odd.next, q1 = &odd, p2 = rhs;
     for (; NULL != p2 && NULL != p1;) {
         if (p1->index == p2->index) {
             p1->coeff += p2->coeff;
             if (DOUBLE_EQUAL(p1->coeff, 0)) {
-                destroy_Poly_head(&p1); //destory node p1 and move forward
+                destroy_poly_head(&p1); //destory node p1 and move forward
                 q1->next = p1;
             }
             destroy_poly_head(&p2); //destory node p2 and move forward
@@ -71,17 +91,20 @@ void poly_add_inp(Poly** lhs, Poly* rhs)
         } else {
             q1 = p1; 
             p1 = p1->next;
-            p2 = p2->next;
         }
     }
     if (NULL == p1)
         q1->next = p2;
+
     *lhs = odd.next;
 }
 
 void poly_sub_inp(Poly** lhs, Poly* rhs)
 {
     Poly* p;
+    if (NULL == lhs) return;
+    if (*lhs == rhs)
+        return destroy_poly(lhs);
     for (p = rhs; NULL != p; p = p->next)
         p->coeff = 0 - p->coeff;
     return poly_add_inp(lhs, rhs);
@@ -89,26 +112,30 @@ void poly_sub_inp(Poly** lhs, Poly* rhs)
 
 void poly_mul_inp(Poly** lhs, const Poly* rhs)
 {
-    Poly *p1, *p2;
-    Poly* origin_lhs = copy(*lhs);
-
+    Poly* p1;
+    Poly* res = NULL;
+    const Poly* p2;
+    //think about the situation that: lhs and rhs are the same poly ?
+    Poly* origin_lhs = poly_copy(*lhs); 
+    
     //we append {-1, 0} to rhs to balance out the origin lhs
-    poly_add_inp(&rhs, create_Poly(-1, 0));
     for (p2 = rhs; NULL != p2; p2 = p2->next) {
-        Poly* tmp = copy(origin_lhs);
+        Poly* tmp = poly_copy(origin_lhs);
         for (p1 = tmp; NULL != p1; p1 = p1->next) {
             p1->coeff *= p2->coeff;
             p1->index += p2->index;
         }
-        poly_add_inp(lhs, tmp);
+        poly_add_inp(&res, tmp);
     }
-    destroy_Poly(&origin_lhs);
+    destroy_poly(lhs);
+    *lhs = res;
+    destroy_poly(&origin_lhs);
 }
 
 void poly_mul_cons_inp(Poly** lhs, double x)
 {
     Poly* p;
-    if (DOUBLE_EQUAL_DELTA(x, 0, 1e-12) == 0) {
+    if (DOUBLE_EQUAL_DELTA(x, 0, 1e-12)) {
         destroy_poly(lhs);
         return;
     }
@@ -127,18 +154,27 @@ void poly_div_inp(Poly** plhs, const Poly* rhs)
     Poly odd = {.next = lhs};
     Poly* res = NULL;
     if (NULL == lhs || NULL == rhs)
-        return NULL;
-    for (; lhs->index >= rhs->index;) {
-        Poly *p1, *q1, *p2;
-        Poly* item = create_Poly(lhs->coeff / rhs->coeff,
+        return;
+    if (*plhs == rhs) { //lhs and rhs are the same poly
+        destroy_poly(plhs);
+        *plhs = create_poly(1, 0);
+        return;
+    }
+    for (; NULL != lhs && lhs->index >= rhs->index;) {
+        Poly *p1, *q1;
+        const Poly* p2;
+        Poly* item = create_poly(lhs->coeff / rhs->coeff,
              lhs->index - rhs->index);
-        poly_add_inp(&res, item);
-        for (p1 = lhs, q1 = &odd; p2 = rhs; NULL != p1 && NULL != p2;) {
+        poly_add_inp(&res, poly_copy(item));
+        //printf("res: \n");
+        //print_poly(res);
+        for (p1 = lhs, q1 = &odd, p2 = rhs; NULL != p1 && NULL != p2;) {
+            //print_poly(p2);
             if (p1->index - p2->index == item->index) {
                 p1->coeff -= p2->coeff * item->coeff;   //coeff may be zero
                 if (DOUBLE_EQUAL(p1->coeff, 0)) {
                     destroy_poly_head(&p1); //move forward
-                    q1 = p1;
+                    q1->next = p1;
                 }
                 p2 = p2->next;
             } else if (p1->index - p2->index > item->index) {
@@ -148,20 +184,22 @@ void poly_div_inp(Poly** plhs, const Poly* rhs)
                 p2 = p2->next;
         }
         lhs = odd.next;
+        //printf("lhs: \n");
+        //print_poly(lhs);
     }
     *plhs = odd.next;
     destroy_poly(plhs);
     *plhs = res;
 }
 
-void poly_deriv(Poly** poly)
+void poly_deriv_inp(Poly** poly)
 {
     Poly odd;
     Poly *p, *q;
-    odd.next = poly;
+    odd.next = *poly;
     for (p = odd.next, q = &odd; NULL != p;) {
         if (0 == p->index) {
-            destroy_Poly_head(&p);  // destroy the node and move forward
+            destroy_poly_head(&p);  // destroy the node and move forward
             q->next = p;
         } else {
             p->coeff *= p->index;
@@ -176,28 +214,24 @@ void poly_deriv(Poly** poly)
 void poly_pow_inp(Poly** poly, int n)
 {
     int i;
-    Poly* origin = copy(*poly);
-    for (i = 0; i < n; i++)
+    Poly* origin;
+    if (0 == n) {
+        *poly = create_poly(1, 0);
+        return;
+    }
+    origin = poly_copy(*poly);
+    for (i = 0; i < n - 1; i++)
         poly_mul_inp(poly, origin);
     destroy_poly(&origin);
 }
 
-double poly_value(Poly* poly, double x)
+double poly_value(const Poly* poly, double x)
 {
-    int i, last_index;
-    double res = 0, x_pow = 1;
-    Poly* p;
+    double res = 0;
+    const Poly* p;
     if (NULL == poly) 
         return 0;
-    for (i = 0; i < poly->index; i++)
-        x_pow *= x;
-
-    last_index = p->index;
-    for (p = poly; NULL != p; p++) {
-        for (i = p->index; i < last_index; i++)
-            x_pow /= x;
-        res += p->coeff * x_pow;
-    }
+    for (p = poly; NULL != p; p = p->next)
+        res += p->coeff * pow(x, p->index);
     return res;
 }
-

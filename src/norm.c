@@ -43,7 +43,7 @@ double norm(Matrix* M, unsigned int p, bool step)
         } else if(2 == p) {
             Matrix* MT = transpose(M);
             Matrix* MTM = mul(MT, M);
-            ret = pow_method(MTM, false);
+            ret = pow_method(MTM, 1e-6, false);
             ret = pow(ret, 0.5);
             destroy_matrix(&MT);
             destroy_matrix(&MTM);
@@ -55,12 +55,4 @@ double norm(Matrix* M, unsigned int p, bool step)
         }
     }
     return ret;
-}
-
-bool is_norm_similar(const Matrix* lhs, const Matrix* rhs, int p, double delta)
-{
-    Matrix* m_sub = sub_inp(lhs, rhs);
-    bool res = norm(m_sub, p, false) < delta;
-    destroy_matrix(&m_sub);
-    return res;
 }
