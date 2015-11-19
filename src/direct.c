@@ -444,17 +444,25 @@ bool is_diagnoal_dominance_3(Matrix* M) {
     int i, j;
     if(M->m != M->n) return false;
     for(i = 0; i < M->m; i++) {
-        if(i - 1 >= 0 && !(abs(M->mem[i][i]) > abs(M->mem[i][i - 1])))
+        if(i - 1 >= 0 && !(abs(M->mem[i][i]) > abs(M->mem[i][i - 1]))) {
+        //    printf("1\n");
             return false;
-        if(i + 1 < M->n && !(abs(M->mem[i][i]) > abs(M->mem[i][i + 1])))
+        }
+        if(i + 1 < M->n && !(abs(M->mem[i][i]) > abs(M->mem[i][i + 1]))) {
+        //    printf("2\n");
             return false;
+        }
     }
     for(i = 0; i < M->m; i++) {
         for(j = 0; j < M->n; j++) {
-            if(abs(i - j) > 1 && !DOUBLE_EQUAL(M->mem[i][j], 0))
-                return false; 
-            if(abs(i - j) <= 1 && DOUBLE_EQUAL(M->mem[i][j], 0))
+            if(abs(i - j) > 1 && !DOUBLE_EQUAL(M->mem[i][j], 0)) {
+            //    printf("3\n");
                 return false;
+            }
+            //if(abs(i - j) <= 1 && DOUBLE_EQUAL(M->mem[i][j], 0)) {
+            //    printf("4\n");
+            //    return false;
+            //}
         }
     }
     return true;
