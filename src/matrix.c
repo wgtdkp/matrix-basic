@@ -534,3 +534,17 @@ NO_INV:
         "matrix, no inervse matrix!\n");
     return NULL;
 }
+
+unsigned long long factorial(size_t n)
+{
+    unsigned long long res = 1;
+    if (0 == n)
+        return 1;
+    while (n-- > 1)
+        res *= n;
+    return res;
+}
+
+
+
+

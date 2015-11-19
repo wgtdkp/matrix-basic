@@ -43,7 +43,7 @@ Poly* lagrange(const double* xarr, const double* yarr, int n)
     }
     //print_poly(omega);
     omega_deriv = poly_copy(omega);
-    poly_deriv_inp(&omega_deriv);
+    poly_diff_inp(&omega_deriv);
     for (i = 0; i < n; i++) {
         //printf("i = %d\n", i);
         tmp->next->coeff = -xarr[i];
@@ -75,7 +75,7 @@ Poly* newton(const double* xarr, const double* yarr, int n)
         item = poly_copy(omega);
         poly_mul_inp(&omega, tmp);
         omega_deriv = poly_copy(omega);
-        poly_deriv_inp(&omega_deriv);
+        poly_diff_inp(&omega_deriv);
         for (j = 0, coeff = 0; j <= i; j++) {
             coeff += yarr[j] / poly_value(omega_deriv, xarr[j]);
         }
@@ -171,7 +171,7 @@ Poly** spline(const double* xarr, const double* yarr, int n, double a, double b,
         d->mem[0][0] = 2 * a;
         d->mem[n-1][0] = 2 * b;
     } else if (2 == type) {
-
+        printf("error: not implemented yet!\n");
     } else {
         printf("error: bad type = %d!\n", type);
         res = NULL;

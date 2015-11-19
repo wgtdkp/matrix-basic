@@ -1,6 +1,6 @@
 CFLAGS = -Wall
-SRCS = main.c matrix.c direct.c nonlinear.c\
-	eigenvalue.c norm.c iterative.c poly.c interpolation.c
+SRCS = main.c matrix.c poly.c direct.c nonlinear.c approximation.c \
+	eigenvalue.c norm.c iterative.c interpolation.c integration.c
 
 TARGET = mym
 

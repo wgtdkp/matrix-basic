@@ -146,4 +146,8 @@ Matrix* inverse(Matrix* M);
 
 void swap_matrix(Matrix* M, Matrix* N);
 
+unsigned long long factorial(size_t n);
+
+
 #endif
+

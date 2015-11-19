@@ -34,7 +34,7 @@ void poly_sub_inp(Poly** lhs, Poly* rhs);
 void poly_mul_inp(Poly** lhs, const Poly* rhs);
 void poly_mul_cons_inp(Poly** lhs, double x);
 void poly_div_inp(Poly** plhs, const Poly* rhs);
-void poly_deriv_inp(Poly** poly);
+void poly_diff_inp(Poly** poly);
 double poly_value(const Poly* poly, double x);
 void poly_pow_inp(Poly** poly, int n);
 

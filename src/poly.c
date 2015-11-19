@@ -192,7 +192,7 @@ void poly_div_inp(Poly** plhs, const Poly* rhs)
     *plhs = res;
 }
 
-void poly_deriv_inp(Poly** poly)
+void poly_diff_inp(Poly** poly)
 {
     Poly odd;
     Poly *p, *q;

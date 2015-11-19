@@ -10,6 +10,9 @@
 #include "poly.h"
 #include "interpolation.h"
 #include "nonlinear.h"
+#include "integration.h"
+#include "approximation.h"
+
 
 static char* app_name = "mym";
 
@@ -32,30 +35,33 @@ void usage(void) {
         );
 }
 
+static double foo(double x, void* coeff)
+{
+    return 1.0 / x / x;
+}
+
+static double bar(double x, void* coeff)
+{
+    return x * x * exp(-x);
+}
+
+
 int main(int argc, char* argv[]) {
 //int main(void) {
     //char* argv[3] = {"mym", "qr", "./inputs/m.txt"};
     //int argc = 3;
     int i, j, n;
     Matrix *A = NULL, *B = NULL, *X = NULL;
-    if (argc < 2) {
-	usage();	
-	return -1;
-    } else if(argc >= 2 && 0 == strcmp(argv[1], "help")) {
-	usage();
-	return -1;
+    if (argc <= 2) {
+    	usage();	
+    	return -1;
     }
     
     app_name = argv[0];
-    if(argc >= 3) {
-		if (NULL == freopen(argv[2], "r", stdin)) {
-			printf("error:can not find file:%s !\n", argv[2]);
-			return -2;
-		}
-    } else {
-	usage();
-	return -1;
-    }
+	if (NULL == freopen(argv[2], "r", stdin)) {
+		printf("error:can not find file:%s !\n", argv[2]);
+		return -2;
+	}
     
     if (argc >= 4 && 0 == strcmp(argv[3], "step"))
         step = 1;
@@ -140,7 +146,7 @@ int main(int argc, char* argv[]) {
         //poly_pow_inp(&poly, 3);
         //print_poly(poly);
         //printf("poly_value: %.6lf\n", poly_value(poly, 5));
-        //poly_deriv_inp(&poly);
+        //poly_diff_inp(&poly);
         //poly_div_inp(&poly, tmp);
         //print_poly(poly);
         //destroy_poly(&poly);
@@ -180,6 +186,23 @@ int main(int argc, char* argv[]) {
         printf("\n");
         print_complex(&roots[1]);
         printf("\n");
+    } else if (0 == strcmp("romberg", argv[1])) {
+        double res;
+        res = romberg(foo, 0.2, 1, 1e-5);
+        printf("integration: %lf\n", res);
+    } else if (0 == strcmp("simpson", argv[1])) {
+        double res;
+        res = simpson(foo, 0.2, 1, 1024);
+        printf("integration: %lf\n", res);
+    } else if (0 == strcmp("integration", argv[1])) {
+        double res;
+        res = integration(foo, 0.2, 1, 0.00133333);
+        printf("integration: %lf\n", res);
+    } else if (0 == strcmp("diff", argv[1])) {
+        double res;
+        //printf("%lf\n", exp(1));
+        res = diff(bar, 0.5, 1e-12);
+        printf("diff: %.13lf\n", res);
     } else {
         Matrix* test = A;
         printf("norm: %lf\n", norm(test, 2, step));
