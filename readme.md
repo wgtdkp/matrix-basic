@@ -42,7 +42,7 @@ calculation error because of the machine representation of floating number.
  * as a study tool, it supports to give out the calculation steps 
 	 with an optional argument "step", like:
 
-	```$ ./mym gauss .\input\m.txt step```
+	```$ ./mym gauss ./input/m.txt step```
 	
 	 will give out the A matrix and B matrix at each elimiaation step.
 
