@@ -4,15 +4,15 @@ This is my numeric analysis exercises. It includes some basical
 elements about playing with matrix.
 
 To make the code straightforward, i did not make these optimizations 
-to reduce its memory. So that, you can easily understand what the 
+to reduce its memory usage. So, you can easily understand what the 
 code is doing with any numeric analysis textbook.
 	
 It maybe not very efficient when the input matrix is too big. But 
 i think it's quick enough to give the answer of your numeric analysis 
-exercise or you can use it to check if your hand work is correct.
+exercise or you can use it to verify your hand work.
 
-Nodes that when the numbers come to be very big, these is some 
-calculation error because of the machine representation of floating.
+Notes that when the numbers come to be very big, these is some 
+calculation error because of the machine representation of floating number.
 
 **HOW TO INSTALL IT**
  * clone it to your linux machine.
