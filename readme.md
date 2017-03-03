@@ -44,7 +44,7 @@ calculation error because of the machine representation of floating number.
 
 	```$ ./mym gauss ./input/m.txt step```
 	
-	 will give out the A matrix and B matrix at each elimiaation step.
+	 will give out the A matrix and B matrix at each elimination step.
 
 **WHAT IS THE INPUT FILE**<br />
 The input matrix file is a simple representation of the linear equations.
