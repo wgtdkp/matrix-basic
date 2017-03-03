@@ -40,7 +40,7 @@ calculation error because of the machine representation of floating number.
  * it supports (main element) gauss elimination and (main element) 
    triangular decomposition.
  * as a study tool, it supports to give out the calculation steps 
-	 with a optional argument "step", like:
+	 with an optional argument "step", like:
 
 	```$ ./mym gauss .\input\m.txt step```
 	
